@@ -19,7 +19,7 @@ library(xportr)
 library(readxl)
 library(haven)
 
-# reading xpt files 
+# Load source xpt datasets ----
 
 dm <- haven::read_xpt("/cloud/project/sdtm/dm.xpt")
 ds <- haven::read_xpt("/cloud/project/sdtm/ds.xpt")
@@ -33,10 +33,24 @@ adsl_spec <- readxl::read_xlsx("/cloud/project/metadata/specs.xlsx", sheet = "Va
       filter(dataset == "ADSL") %>%
       mutate(format = str_to_lower(format))
 
-# Replacing spece with NA in sas datasets
+# Replacing spece with NA in sas datasets ----
 
 dm <- convert_blanks_to_na(dm)
 ds <- convert_blanks_to_na(ds)
 ex <- convert_blanks_to_na(ex)
+
+# User defined functions -----
+
+func_agegr1 <- function(x) {
+   case_when(
+     x < 65 ~ "1",
+     between(x, 65, 80) ~ "2",
+     x >80 ~ "3"
+   )  
+}
+
+
+
+
 
 
