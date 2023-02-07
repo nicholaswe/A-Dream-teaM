@@ -7,6 +7,7 @@
 #install.packages("admiral.test")
 #install.packages("xportr")
 #install.packages("readxl")
+#install.packages("haven")
 
 
 library(admiral)
@@ -16,10 +17,13 @@ library(lubridate)
 library(stringr)
 library(xportr)
 library(readxl)
+library(haven)
 
-dm <- admiral_dm
-ds <- admiral_ds
-ex <- admiral_ex
+# reading xpt files 
+
+dm <- haven::read_xpt("/cloud/project/sdtm/dm.xpt")
+ds <- haven::read_xpt("/cloud/project/sdtm/ds.xpt")
+ex <- haven::read_xpt("/cloud/project/sdtm/ex.xpt")
 
 
 # Reading ADSL specifications from specs sheet
