@@ -24,3 +24,13 @@ metacore <- metacore %>%
   select_dataset("ADSL")
 
 metacore$ds_vars
+
+# trying to read by haven
+
+# Use haven to read sdtm domains
+dm1 <- haven::read_xpt("sdtm/dm.xpt")
+
+# Clean missing values after read xpt file
+dm <- convert_blanks_to_na(dm1)
+
+View(dm)
