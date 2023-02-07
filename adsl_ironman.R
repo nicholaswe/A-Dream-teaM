@@ -39,6 +39,15 @@ dm <- convert_blanks_to_na(dm)
 ds <- convert_blanks_to_na(ds)
 ex <- convert_blanks_to_na(ex)
 
+# Gets a list of AM vars required for derivations 
+# NOTE: Look at the difference between the objects
+dm_vars <- vars(STUDYID, USUBJID, SUBJID, SITEID, ARM, AGE, AGEU, RACE, SEX, ETHNIC, RFSTDTC, RFENDTC)
+dm_vars_v <- c("STUDYID", "USUBJID", "SUBJID", "SITEID", "ARM", "AGE", "AGEU", "RACE", "SEX", "ETHNIC", "RFSTDTC", "RFENDTC")
+
+
+ds_vars <- vars(STUDYID, USUBJID, DSDECOD)
+ds_vars_v <- c("STUDYID", "USUBJID", "DSDECOD")
+
 # User defined functions -----
 
 func_agegr1 <- function(x) {
@@ -52,6 +61,7 @@ func_agegr1 <- function(x) {
 # deriving AGEGR1, AGEGR1N -----
 
 adsl_agegr <- dm %>% 
+  select(all_of(dm_vars_v)) %>%
   mutate(AGEGR1 = func_agegr1(AGE),
          AGEGR1N = as.integer(AGEGR1))
 
