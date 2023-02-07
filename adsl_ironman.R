@@ -49,6 +49,11 @@ func_agegr1 <- function(x) {
    )  
 }
 
+# deriving AGEGR1, AGEGR1N -----
+
+adsl_agegr <- dm %>% 
+  mutate(AGEGR1 = func_agegr1(AGE),
+         AGEGR1N = as.integer(AGEGR1))
 
 
 
