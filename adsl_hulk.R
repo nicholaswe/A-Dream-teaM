@@ -97,17 +97,24 @@ format_armn <- function(x) {
 ##auxiliar DS
 
 #auxiliar dates
+
 #MH
-mh_disons<-mh %>%
+
+mh_disons <- mh %>%
+  
   filter(MHCAT=="PRIMARY DIAGNOSIS") %>%
+  
   derive_vars_dt(
     dtc = MHSTDTC,
     new_vars_prefix = "DISONS"
   )
 
 #SV
-sv_trtsdt<-sv %>%
+
+sv_trtsdt <- sv %>%
+  
   filter(VISITNUM==3) %>%
+  
   derive_vars_dt(
     dtc = SVSTDTC,
     new_vars_prefix = "TRTS"
@@ -115,12 +122,18 @@ sv_trtsdt<-sv %>%
 
 
 #qsorres auxiliar (char to int)
-qsorres<-qs %>%
+
+qsorres <- qs %>%
+  
   filter(QSCAT == "MINI-MENTAL STATE") %>%
+  
   mutate_all(type.convert, as.is=TRUE)
 
+
 adsl <- dm %>%
+  
   #Predecesor DM variables (no computation)
+  
   select (AGE,
           AGEU,
           ARM,
@@ -137,56 +150,79 @@ adsl <- dm %>%
           USUBJID)
 
 adsla <- adsl %>%
+  
   derive_vars_merged(
     dataset_add = ds,
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(VISNUM = VISITNUM),
     filter_add = DSTERM =="PROTCOL COMPLETED"
   ) %>%
+  
   derive_vars_merged(
     dataset_add = ds,
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(DCDECOD = DSDECOD),
     filter_add = DSCAT == "DISPOSITION EVENT"
   ) %>%
+  
   derive_vars_merged(
     dataset_add = vs,
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(WEIGHTBL = VSSTRESN),
     filter_add = (VSTESTCD=="WEIGHT" & VISITNUM==3 )
   ) %>%
+  
   derive_vars_merged(
     dataset_add = vs,
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(HEIGHTBL = VSSTRESN),
     filter_add = (VSTESTCD=="HEIGHT" & VISITNUM==1 )
   ) %>%
+  
   derive_vars_merged(
     dataset_add = mh_disons,
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(DISONSDT )
   ) %>%
+  
   derive_vars_merged(
     dataset_add = sv_trtsdt,
     by_vars = vars(STUDYID, USUBJID),
     new_vars = vars(TRTSDT )
   ) %>%
+  
   mutate(
+    
     EOSSTT = format_eoxxstt_nodef(DCDECOD),
+    
     RACEN = format_racen(RACE),
+    
     ARMN = format_armn(ARM),
+    
     AGEGR1N = format_agegr1n(AGE),
+    
     AGEGR1 = format_agegr1(AGEGR1N),
+    
     BMIBL = WEIGHTBL / ((HEIGHTBL/100)**2),
+    
     VISNUMEN = format_visnumen (VISNUM),
-    RFENDT=convert_dtc_to_dt(RFENDTC),
-    TRT01P=ARM,
-    TRT01A=TRT01P,
-    TRT01PN=ARMN,
-    TRT01AN=TRT01PN,
+    
+    RFENDT = convert_dtc_to_dt(RFENDTC),
+    
+    TRT01P = ARM,
+    
+    TRT01A = TRT01P,
+    
+    TRT01PN = ARMN,
+    
+    TRT01AN = TRT01PN,
+    
     ITTFL = if_else(ARMCD!="", "Y", "N"),
+    
     SAFFL = if_else(ITTFL=="Y" & !is.na(TRTSDT) , "Y", "N")
+    
   )  %>%
+  
   derive_var_merged_summary(
     dataset_add = qsorres,
     by_vars = vars(STUDYID, USUBJID),
@@ -197,18 +233,6 @@ adsla <- adsl %>%
   )
 
 
-
-=======
-# trying to read by haven
-
-# Use haven to read sdtm domains
-dm1 <- haven::read_xpt("sdtm/dm.xpt")
-
-# Clean missing values after read xpt file
-dm <- convert_blanks_to_na(dm1)
-
-View(dm)
->>>>>>> 89a90bdc645f1d4d6ee7e4843071f7f545ca80b1
 
 
 
