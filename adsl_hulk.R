@@ -27,7 +27,7 @@ vs <- read_xpt("sdtm/vs.xpt")
 qs <- read_xpt("sdtm/qs.xpt")
 mh <- read_xpt("sdtm/mh.xpt")
 sv <- read_xpt("sdtm/sv.xpt")
-my_spec<-read_xlsx("metadata/specs.xlsx",shee="Codelists")
+my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
 
 
 # Read in metacore object 
