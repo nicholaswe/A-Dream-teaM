@@ -1,4 +1,5 @@
 # Name: ADSL
+# Thor team
 #
 library(admiral)
 library(metatools)
