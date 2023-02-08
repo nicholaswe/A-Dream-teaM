@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-# adsl program for Ironman team
-=======
 # ADSL program for Ironman team
 # Programmers : Naveen
 #               Nelson
@@ -72,4 +69,3 @@ adsl_agegr <- dm %>%
 
 
 
->>>>>>> fd0f672eea90e7454dd552a253712b5440122b49

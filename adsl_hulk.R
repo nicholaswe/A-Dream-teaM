@@ -119,7 +119,6 @@ qsorres<-qs %>%
   filter(QSCAT == "MINI-MENTAL STATE") %>%
   mutate_all(type.convert, as.is=TRUE)
 
-
 adsl <- dm %>%
   #Predecesor DM variables (no computation)
   select (AGE,
@@ -196,7 +195,6 @@ adsla <- adsl %>%
     analysis_var = QSORRES,
     summary_fun =function(x) sum(x, na.rm = TRUE)
   )
-
 
 
 
