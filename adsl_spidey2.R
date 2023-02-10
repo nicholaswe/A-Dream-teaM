@@ -139,6 +139,15 @@ adsl_ct <- adsl_preds %>%
                            TRUE ~ TRT01P)
            )
 
+### DCDECOD
+
+PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
+
+DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>% 
+  mutate(DCDECOD = DSDECOD) %>% 
+select(USUBJID, DCDECOD)
+
+
 
 ### VISNUMEN
 
@@ -149,7 +158,36 @@ ds_aux %<>% filter (DSTERM == "PROTOCOL COMPLETED") %>%
                               VISITNUM == 13 & DSTERM == "PROTOCOL COMPLETED" ~ 12,
                               TRUE ~ VISITNUM))
             select(USUBJID, VISNUMEN)
+            
+            
+            
+### WEIGHTBL (we need to use only 1 significant digit)
 
+PRE_WEIGHTBL <- vs %>% select(USUBJID, VISITNUM, VSTESTCD, VSSTRESN)
+            
+WEIGHTBL <- PRE_WEIGHTBL %>%  filter (VSTESTCD == "WEIGHT" & VISITNUM == 3) %>% 
+              mutate(WEIGHTBL = VSSTRESN) %>% 
+              select(USUBJID, WEIGHTBL)
+
+
+
+### HEIGHTBL (we need to use only 1 significant digit)
+
+PRE_HEIGHTBL <- vs %>% select(USUBJID, VISITNUM, VSTESTCD, VSSTRESN)
+
+HEIGHTBL <- PRE_HEIGHTBL %>%  filter (VSTESTCD == "HEIGHT" & VISITNUM == 1) %>% 
+  mutate(HEIGHTBL = VSSTRESN) %>% 
+  select(USUBJID, HEIGHTBL)
+
+
+### EDUCLVL
+
+PRE_EDUCLVL <- sc %>% select(USUBJID, SCSTRESN, SCTESTCD)
+
+EDUCLVL <- PRE_EDUCLVL %>%  filter (SCTESTCD == "EDLEVEL") %>% 
+  mutate(EDUCLVL = SCSTRESN) %>% 
+  select(USUBJID, EDUCLVL)
+  
 # Next (last) step: merge with ADSL
 
 
