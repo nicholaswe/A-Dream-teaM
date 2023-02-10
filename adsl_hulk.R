@@ -1,5 +1,8 @@
 # running the pharmaverse end-to-end ADSL example in blocks
 
+# call our libraries ------------------------------------------------------
+
+
 options(repos = c(
   pharmaverse = 'https://pharmaverse.r-universe.dev',
   CRAN = 'https://cloud.r-project.org'))
@@ -16,30 +19,9 @@ library(stringr)
 library(haven)
 library(readxl)
 
-
-# Read in input SDTM data 
-data("admiral_dm")
-data("admiral_ex")
-dm <- read_xpt("sdtm/dm.xpt")
-ds <- read_xpt("sdtm/ds.xpt")
-ex <- read_xpt("sdtm/ex.xpt")
-vs <- read_xpt("sdtm/vs.xpt")
-qs <- read_xpt("sdtm/qs.xpt")
-mh <- read_xpt("sdtm/mh.xpt")
-sv <- read_xpt("sdtm/sv.xpt")
-my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
+# auxiliary functions -----------------------------------------------------
 
 
-# Read in metacore object 
-load(metacore_example("pilot_ADaM.rda"))
-metacore <- metacore %>% 
-  select_dataset("ADSL")
-
-metacore$ds_vars
-
-
-
-#auxiliar functions
 format_eoxxstt_nodef <- function(x) {
   case_when(
     x == "COMPLETED" ~ "COMPLETED",
@@ -92,6 +74,80 @@ format_armn <- function(x) {
     TRUE ~ 99
   )
 }
+
+# Read in input SDTM data 
+data("admiral_dm")
+data("admiral_ex")
+dm <- read_xpt("sdtm/dm.xpt")
+ds <- read_xpt("sdtm/ds.xpt")
+ex <- read_xpt("sdtm/ex.xpt")
+vs <- read_xpt("sdtm/vs.xpt")
+qs <- read_xpt("sdtm/qs.xpt")
+mh <- read_xpt("sdtm/mh.xpt")
+sv <- read_xpt("sdtm/sv.xpt")
+my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
+
+
+# Read in metacore object 
+load(metacore_example("pilot_ADaM.rda"))
+metacore <- metacore %>% 
+  select_dataset("ADSL")
+
+metacore$ds_vars
+
+
+
+# auxiliar functions
+
+
+
+# kyle playtime -----------------------------------------------------------
+
+# ==============================
+
+format_armn <- function(x) {
+  case_when(
+    x=="Placebo" ~ 0,
+    x=="Xanomeline Low Dose" ~ 1,
+    x=="Xanomeline High Dose" ~ 2,
+    TRUE ~ 99
+  )}
+  
+format_trt01pn <- function(x) {
+  case_when(
+    x =="Placebo" ~ 0,
+    x =="Xanomeline Low Dose" ~ 54,
+    x =="Xanomeline High Dose" ~ 81,
+    TRUE ~ 99
+  )}
+
+sv3 = sv %>% 
+  filter(VISITNUM == 3)
+
+adsl <- dm %>% select(AGE,
+                      AGEU,
+                      ARM,
+                      DTHFL,
+                      ETHNIC,
+                      RACE,
+                      RFENDTC,
+                      RFSTDTC,
+                      SEX,
+                      SITEID,
+                      STUDYID,
+                      SUBJID,
+                      USUBJID) %>%
+  
+  mutate(ARMN = format_armn(ARM),
+         
+         TRT01PN = format_trt01pn(ARM),
+         
+         TRTSDT = ,
+         
+         TRTEDT = ,
+         
+         TRTDUR = TRTEDT - TRTSDT + 1) %>%
+  
 
 
 ##auxiliar DS
