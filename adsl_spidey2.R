@@ -140,5 +140,16 @@ adsl_ct <- adsl_preds %>%
            )
 
 
+### VISNUMEN
+
+ds_aux <- ds %>% select(USUBJID, DSTERM, VISITNUM)
+
+ds_aux %<>% filter (DSTERM == "PROTOCOL COMPLETED") %>% 
+            mutate(VISNUMEN = case_when(
+                              VISITNUM == 13 & DSTERM == "PROTOCOL COMPLETED" ~ 12,
+                              TRUE ~ VISITNUM))
+            select(USUBJID, VISNUMEN)
+
+# Next (last) step: merge with ADSL
 
 
