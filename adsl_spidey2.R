@@ -63,6 +63,8 @@ build_from_derived(specs,
                    list(), 
                    predecessor_only = FALSE)
 
+
+
 ###############
 
 # We can see that we need DM and ADSL datasets, but turns out that we don't have ADSL.
@@ -117,6 +119,26 @@ build_from_derived(specs,
 
 adsl_preds <- dm %>%
               transmute(AGE = AGE, AGEU = AGEU, ARM = ARM, DTHFL = DTHFL, ETHNIC = ETHNIC,
-                     RACE = RACE, RFENDTC = RFENDTC, RFSTDTC = RFSTDTC, SEX = SEX,
-                     SITEID = SITEID, STUDYID = STUDYID, SUBJID = SUBJID, USUBJID = USUBJID,
-                     TRT01P = ARM, TRT01A = ACTARM)
+                        RACE = RACE, RFENDTC = RFENDTC, RFSTDTC = RFSTDTC, SEX = SEX,
+                        SITEID = SITEID, STUDYID = STUDYID, SUBJID = SUBJID, USUBJID = USUBJID,
+                        TRT01P = ARM, TRT01A = ACTARM)
+
+
+adsl_ct <- adsl_preds %>% 
+           create_cat_var(specs, 
+                          ref_var = AGE, 
+                          grp_var = AGEGR1, 
+                          num_grp_var = AGEGR1N) %>% 
+           create_var_from_codelist(specs, 
+                                    input_var = RACE, 
+                                    out_var = RACEN) %>% 
+           # Removing screen failures from ARM and TRT01P to match the define and FDA guidence
+           mutate(ARM = if_else(ARM == "Screen Failure", NA_character_, ARM),
+                  TRT01P = case_when(
+                           TRT01P == "Screen Failure" ~ NA_character_,
+                           TRUE ~ TRT01P)
+           )
+
+
+
+
