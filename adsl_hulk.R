@@ -248,15 +248,45 @@ adsl_SF = adsl %>%
 
 adsl_trtdur = rbind(adsl_dur,
                     
-                    adsl_SF)
+                    adsl_SF) 
 
+# pick back up on monday: add more variables in order? ------------------
 
-
-# pick back up on monday to add more variables in order? ------------------
-
-
+adsl_order = adsl_trtdur %>% 
+  
+  select(STUDYID,
+         USUBJID,
+         SUBJID,
+         SITEID,
+         #SITEGR1,
+         ARM,
+         #TRT01P,
+         TRT01PN,
+         #TRT01A,
+         #TRT01AN,
+         TRTSDT = SVSTDTC,
+         TRTEDT = EXENDTC,
+         TRTDURD = TRTDUR,
+         # AVGDD
+         # CUMDOSE
+         AGE,
+         # AGEGR1
+         # AGEGR1N
+         AGEU,
+         RACE,
+         # RACEN
+         SEX,
+         ETHNIC,
+         #...
+         DTHFL,
+         #...
+         RFSTDTC,
+         RFENDTC
+         )
 
   
+
+
 ##auxiliar DS
 
 #auxiliar dates
