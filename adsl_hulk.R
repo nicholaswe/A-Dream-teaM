@@ -287,7 +287,51 @@ adsl_order = adsl_trtdur %>%
          RFENDTC
          )
 
+# SITEGR1
+# Sites do not appear pooled, they are specified, so equals SITEID
+# specify position in mutate to keep in order from spec sheet
+
+adsl_all = adsl_order %>% 
   
+  mutate(SITEGR1 = SITEID,
+         .after = SITEID)
+
+# TRT01P
+# apparently this is just DM.ARM ? 
+
+adsl_all = adsl_all %>% 
+  
+  mutate(TRT01P = ARM,
+         
+         .after = ARM)
+
+# TRT01A
+# this is the actual treatment, which is the same as planned in this study
+
+adsl_all = adsl_all %>% 
+  
+  mutate(TRT01A = TRT01P,
+         
+         .after = TRT01PN)
+
+# TRT01AN
+# this is the actual treatment, which is the same as planned in this study
+# codelist for ARMN specifies this means "0, 54, 81"
+
+adsl_all = adsl_all %>% 
+  
+  mutate(TRT01AN = TRT01PN,
+         
+         .after = TRT01A)
+
+
+# AVGDD
+
+
+
+
+# more auxiliary ----------------------------------------------------------
+
 
 
 ##auxiliar DS
