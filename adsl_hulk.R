@@ -252,6 +252,9 @@ adsl_trtdur = rbind(adsl_dur,
 
 
 
+# pick back up on monday to add more variables in order? ------------------
+
+
 
   
 ##auxiliar DS
