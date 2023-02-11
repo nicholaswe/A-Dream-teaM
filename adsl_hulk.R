@@ -121,8 +121,72 @@ format_trt01pn <- function(x) {
     TRUE ~ 99
   )}
 
-sv3 = sv %>% 
+# calculate treatment duration --------------------------------------------
+
+# get start date
+
+sv_3 = sv %>% 
+  
   filter(VISITNUM == 3)
+
+# get end date
+
+ex_last = ex %>% 
+  
+  group_by(USUBJID) %>% 
+  
+  arrange(as.Date(EXENDTC)) %>%
+  
+  slice(n())
+
+# check if last date worked
+
+max((ex_last %>% count(USUBJID))$n)
+
+is.na((ex_last %>% count(USUBJID))$n)
+
+# try to merge the df 's
+
+# dur_df = merge(x = (sv_3 %>% select(USUBJID, SVSTDTC)),
+#                
+#                y = (ex_last %>% select(USUBJID, EXENDTC)),
+#                
+#                by.x = sv_3$USUBJID)
+          
+
+# let's hack it instead
+
+sv_3_id = sv_3 %>% 
+  
+  arrange(USUBJID) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+ex_last_id = ex_last %>% 
+  
+  arrange(USUBJID) %>% 
+  
+  select(USUBJID,
+         
+         EXENDTC)
+
+# merge and get trtdur per ID:
+
+dur_df = merge(sv_3_id,
+               
+               ex_last_id) %>% 
+  
+  mutate(
+    
+    TRTDUR = as.Date(EXENDTC) - as.Date(SVSTDTC) + 1
+    
+    )
+
+
+# build adsl from scratch -------------------------------------------------
+
 
 adsl <- dm %>% select(AGE,
                       AGEU,
@@ -140,16 +204,26 @@ adsl <- dm %>% select(AGE,
   
   mutate(ARMN = format_armn(ARM),
          
-         TRT01PN = format_trt01pn(ARM),
-         
-         TRTSDT = ,
-         
-         TRTEDT = ,
-         
-         TRTDUR = TRTEDT - TRTSDT + 1) %>%
+         TRT01PN = format_trt01pn(ARM))
+
+# combine adsl with treatment duration
+
+adsl_dur = merge(adsl,
+                 
+                 dur_df)
+
+# output didn't give same number of IDs as adsl, which don't match?
+
+setdiff(adsl$USUBJID,
+        
+        dur_df$USUBJID)
+
+
+
+
+
+
   
-
-
 ##auxiliar DS
 
 #auxiliar dates
