@@ -214,11 +214,41 @@ adsl_dur = merge(adsl,
 
 # output didn't give same number of IDs as adsl, which don't match?
 
-setdiff(adsl$USUBJID,
-        
-        dur_df$USUBJID)
+difference = setdiff(adsl$USUBJID,
+                     
+                     dur_df$USUBJID)
 
 
+adsl_match = adsl %>% 
+  
+  filter(ARM != "Screen Failure")
+
+
+# follow up with Martha, Monday -------------------------------------------
+# merge the 254 that match, then tack back on the remainder
+
+adsl_dur = merge(adsl_match,
+                 dur_df)
+
+# the remainder are all screen failures
+# let's just add empty variables for them, and then rbind
+
+
+adsl_SF = adsl %>% 
+  
+  filter(ARM == "Screen Failure") %>% 
+  
+  mutate(SVSTDTC = NA,
+         EXENDTC = NA,
+         TRTDUR = NA
+         )
+
+
+# rbind it all together
+
+adsl_trtdur = rbind(adsl_dur,
+                    
+                    adsl_SF)
 
 
 
