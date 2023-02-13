@@ -1,8 +1,13 @@
 # running the pharmaverse end-to-end ADSL example in blocks
 
-# kyle token
-# gitcreds::gitcreds_set()
-# ghp_EE6POQTZoT70TJ045SXStkr5xayoV13shCGd
+
+# Kyle sign-in process...
+
+#  usethis::use_git_config(user.name = "kyleireton",
+#                          user.email = "kyle.ireton@gmail.com")
+
+#  gitcreds::gitcreds_set()
+#  Enter token: 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
 
 # call our libraries ------------------------------------------------------
 
