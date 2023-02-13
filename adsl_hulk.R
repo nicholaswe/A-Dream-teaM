@@ -293,12 +293,12 @@ adsl_order = adsl_trtdur %>%
          USUBJID,
          SUBJID,
          SITEID,
-         #SITEGR1,
+         # SITEGR1,
          ARM,
-         #TRT01P,
+         # TRT01P,
          TRT01PN,
-         #TRT01A,
-         #TRT01AN,
+         # TRT01A,
+         # TRT01AN,
          TRTSDT = SVSTDTC,
          TRTEDT = EXENDTC,
          TRTDURD = TRTDUR,
@@ -320,13 +320,52 @@ adsl_order = adsl_trtdur %>%
          )
 
 # SITEGR1
-# Sites do not appear pooled, they are specified, so equals SITEID
-# specify position in mutate to keep in order from spec sheet
+# Sites are pooled if there are fewer than 3 patients per site
 
-adsl_all = adsl_order %>% 
+# check num patients per site
+
+site_pool_n = adsl_order %>% 
   
-  mutate(SITEGR1 = SITEID,
-         .after = SITEID)
+  group_by(SITEID) %>% 
+  
+  count() %>% 
+  
+  arrange(n) %>% 
+  
+  mutate(
+    
+    SITEGR1 = case_when (
+      
+      n < 3 ~ as.character(paste(900)),
+      
+      TRUE ~ SITEID
+      
+      )) %>% 
+  
+  ungroup()
+
+
+# we need to add the next lowest site to the pool to increase n to >= 3
+# but we will not deal with programming it right now
+# let's combine SITEGR1 with the pooled group code
+
+adsl_all = merge(adsl_order,
+                 
+                 site_pool_n)
+
+# let's try the same thing but easier with admiral? 
+
+adsl_alt = adsl_order %>% 
+  
+  derive_vars_merged(
+    
+    dataset_add = site_pool_n,
+    new_vars = vars(SITEGR1 = SITEGR1),
+    by_vars = vars(SITEID)
+    
+    )
+
+
 
 # TRT01P
 # apparently this is just DM.ARM ? 
@@ -358,6 +397,64 @@ adsl_all = adsl_all %>%
 
 
 # AVGDD
+
+# need CUMDOSE, and for that we need ARMN
+
+# for dose 81, we need something tricky:
+
+# 54 for int 1, then 81 for int 2, then 54 for int 3
+
+
+# AGEGR1
+# AGEGR1 = 1 if AGE <65. AGEGR1 = 2 if AGE 65-80. AGEGR1 = 3 if AGE >80
+
+adsl_all = adsl_all %>% 
+  
+  mutate(AGEGR1 = case_when(
+    
+    AGE < 65 ~ "AGE <65",
+    AGE >= 65 & AGE <= 80 ~ "AGE 65-80",
+    AGE > 80 ~ "AGE >80"
+    
+  ),
+  
+  .after = AGE)
+
+
+# AGEGR1N
+# AGEGR1 = 1 if AGE <65. AGEGR1 = 2 if AGE 65-80. AGEGR1 = 3 if AGE >80
+
+adsl_all = adsl_all %>% 
+  
+  mutate(AGEGR1N = case_when(
+    
+    AGEGR1 == "AGE <65" ~ 1,
+    AGEGR1 == "AGE 65-80" ~ 2,
+    AGEGR1 == "AGE >80" ~ 3
+    
+  ),
+  
+  .after = AGEGR1)
+
+
+# RACEN 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
