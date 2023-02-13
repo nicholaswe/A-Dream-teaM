@@ -35,6 +35,9 @@ mh <- haven::read_xpt("sdtm/mh.xpt") %>%
 ex <- haven::read_xpt("sdtm/ex.xpt") %>%
       convert_blanks_to_na()
 
+sv <- haven::read_xpt("sdtm/sv.xpt") %>%
+  convert_blanks_to_na()
+
 ##################
 ### Derivation ###
 ##################
@@ -122,7 +125,7 @@ adsl_preds <- dm %>%
               transmute(AGE = AGE, AGEU = AGEU, ARM = ARM, DTHFL = DTHFL, ETHNIC = ETHNIC,
                         RACE = RACE, RFENDTC = RFENDTC, RFSTDTC = RFSTDTC, SEX = SEX,
                         SITEID = SITEID, STUDYID = STUDYID, SUBJID = SUBJID, USUBJID = USUBJID,
-                        TRT01P = ARM, TRT01A = ACTARM)
+                        TRT01P = ARM, TRT01A = ACTARM, ARMCD = ARMCD)
 
 # AGEGR1, AGEGR1N and RACEN
 
@@ -138,7 +141,8 @@ adsl_ct <- adsl_preds %>%
            mutate(ARM = if_else(ARM == "Screen Failure", NA_character_, ARM),
                   TRT01P = case_when(
                            TRT01P == "Screen Failure" ~ NA_character_,
-                           TRUE ~ TRT01P))
+                           TRUE ~ TRT01P)) %>% 
+           mutate(ITTFL = if_else(ARMCD =="","N","Y"))
           
 
 ### TRTSDTM, TRTEDTM and TRTDURD
@@ -190,7 +194,7 @@ DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>%
                             select(USUBJID, DCDECOD) %>% 
                             create_var_from_codelist(specs, 
                                                      input_var = DCDECOD, 
-                                                     out_var = DISCCD)
+                                                     out_var = DCREASCD)
 
 
 
@@ -241,6 +245,24 @@ BMIBL <- left_join(HEIGHTBL, WEIGHTBL,  by = "USUBJID") %>%
                         ref_var = BMIBL, 
                         grp_var = BMIBLGR1)
 
+### MMSETOT
+
+MMSETOT <-  qs %>% select(USUBJID, QSORRES, QSCAT) %>% 
+        filter(QSCAT == "MINI-MENTAL STATE") %>% 
+        mutate(QSORRES = QSORRES %>% as.numeric) %>% 
+        group_by(USUBJID) %>% 
+        summarize (MMSETOT = sum(QSORRES))
+
+
+###   DISONSDT
+
+DISONSDT <- mh %>% select(USUBJID, MHSTDTC, MHCAT) %>% 
+            filter(MHCAT == "PRIMARY DIAGNOSIS")     
+
+###   TRTSDT
+
+TRTSDT <-  sv %>% select(USUBJID, SVSTDTC, VISITNUM) %>% 
+  filter(VISITNUM == 3)   
 
 
 # Next (last) step: merge with ADSL
