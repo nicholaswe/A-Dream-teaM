@@ -30,7 +30,10 @@ qs <- haven::read_xpt("sdtm/qs.xpt") %>%
       convert_blanks_to_na()
 
 mh <- haven::read_xpt("sdtm/mh.xpt") %>%
-    convert_blanks_to_na()
+      convert_blanks_to_na()
+
+ex <- haven::read_xpt("sdtm/ex.xpt") %>%
+      convert_blanks_to_na()
 
 ##################
 ### Derivation ###
@@ -123,6 +126,7 @@ adsl_preds <- dm %>%
                         SITEID = SITEID, STUDYID = STUDYID, SUBJID = SUBJID, USUBJID = USUBJID,
                         TRT01P = ARM, TRT01A = ACTARM)
 
+# AGEGR1, AGEGR1N and RACEN
 
 adsl_ct <- adsl_preds %>% 
            create_cat_var(specs, 
@@ -136,16 +140,59 @@ adsl_ct <- adsl_preds %>%
            mutate(ARM = if_else(ARM == "Screen Failure", NA_character_, ARM),
                   TRT01P = case_when(
                            TRT01P == "Screen Failure" ~ NA_character_,
-                           TRUE ~ TRT01P)
-           )
+                           TRUE ~ TRT01P))
+          
+
+### TRTSDTM, TRTEDTM and TRTDURD
+
+
+
+
+# To derive these domains we'll need to use the "ex" domains with some pre-processing step
+# Basically, we'll convert EX.EXSTDTC and EX.EXSTDTC to datetime variables and input missing components.
+  
+ex_aux <- ex %>%
+          derive_vars_dtm(                               # Derive/Impute a Datetime from a Date Character Vector
+                          dtc = EXSTDTC,                 # The "--DTC" date to input
+                          new_vars_prefix = "EXST") %>%  # Prefix used for the output variable(s)
+          derive_vars_dtm(
+                          dtc = EXENDTC,
+                          new_vars_prefix = "EXEN",
+                          time_imputation = "last")      # The value to impute when a time is missing ("last" is the end of the day)
+
+
+adsl_trt <- adsl_ct %>%
+            derive_vars_merged(                       # Add New Variable(s) to the Input Dataset Based on Variables from Another Datase
+                               dataset_add = ex_aux,  # Additional dataset, adding "ex_aux" to "adsl"
+                               filter_add = (EXDOSE > 0 |(EXDOSE == 0 & str_detect(EXTRT, "PLACEBO"))) & !is.na(EXSTDTM), # Filter for additional dataset	
+                               new_vars = vars(TRTSDTM = EXSTDTM, TRTSTMF = EXSTTMF), # Variables to add
+                               order = vars(EXSTDTM, EXSEQ), # Sort order
+                               mode = "first", # Selection mode, determines if the first or last observation is selected
+                               by_vars = vars(STUDYID, USUBJID)) %>% # Grouping variables
+            derive_vars_merged(
+                               dataset_add = ex_aux,
+                               filter_add = (EXDOSE > 0 | (EXDOSE == 0 & str_detect(EXTRT, "PLACEBO"))) & !is.na(EXENDTM),
+                               new_vars = vars(TRTEDTM = EXENDTM, TRTETMF = EXENTMF),
+                               order = vars(EXENDTM, EXSEQ),
+                               mode = "last",
+                               by_vars = vars(STUDYID, USUBJID)) %>% 
+            derive_vars_dtm_to_dt( # Derive Date Variables from Datetime Variables
+                                  source_vars = vars(TRTSDTM, TRTEDTM)) %>%  # A list of datetime variables from which dates are to be extracted
+            derive_var_trtdurd()
+
+
+
 
 ### DCDECOD
 
 PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
 
 DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>% 
-  mutate(DCDECOD = DSDECOD) %>% 
-select(USUBJID, DCDECOD)
+                            mutate(DCDECOD = DSDECOD) %>% 
+                            select(USUBJID, DCDECOD) %>% 
+                            create_var_from_codelist(specs, 
+                                                     input_var = DCDECOD, 
+                                                     out_var = DISCCD)
 
 
 
@@ -187,7 +234,17 @@ PRE_EDUCLVL <- sc %>% select(USUBJID, SCSTRESN, SCTESTCD)
 EDUCLVL <- PRE_EDUCLVL %>%  filter (SCTESTCD == "EDLEVEL") %>% 
   mutate(EDUCLVL = SCSTRESN) %>% 
   select(USUBJID, EDUCLVL)
-  
+
+### BMIBL
+
+BMIBL <- left_join(HEIGHTBL, WEIGHTBL,  by = "USUBJID") %>% 
+         mutate(BMIBL = WEIGHTBL/((HEIGHTBL/100)^2)) %>% 
+         create_cat_var(specs, 
+                        ref_var = BMIBL, 
+                        grp_var = BMIBLGR1)
+
+
+
 # Next (last) step: merge with ADSL
 
 
