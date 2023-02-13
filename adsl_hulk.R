@@ -7,8 +7,9 @@
 #                          user.email = "kyle.ireton@gmail.com")
 
 #  gitcreds::gitcreds_set()
-#  Enter token: ghp_
-# EE6POQTZToT70TJ04SX5tkr5xayoVl3shCGd
+
+#  Enter token: ghp_ #
+#  hXHuKYbIXE1eBQOaItxsA6sibH4Iqo1l2rQy
 
 # call our libraries ------------------------------------------------------
 
