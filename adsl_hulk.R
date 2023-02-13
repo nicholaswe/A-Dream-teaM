@@ -1,6 +1,14 @@
 # running the pharmaverse end-to-end ADSL example in blocks
 
+<<<<<<< HEAD
 # install.packages("metacore")
+=======
+# kyle token
+# ghp_EE6POQTZoT70TJ045SXStkr5xayoV13shCGd
+
+# call our libraries ------------------------------------------------------
+
+>>>>>>> d678a94428fa52299d2e87b0da9635087d100b4e
 
 options(repos = c(
   pharmaverse = 'https://pharmaverse.r-universe.dev',
@@ -18,6 +26,7 @@ library(stringr)
 library(haven)
 library(readxl)
 
+<<<<<<< HEAD
 
 # Read in input SDTM data 
 data("admiral_dm")
@@ -32,18 +41,11 @@ mh <- read_xpt("sdtm/mh.xpt")
 sv <- read_xpt("sdtm/sv.xpt")
 
 my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
+=======
+# auxiliary functions -----------------------------------------------------
+>>>>>>> d678a94428fa52299d2e87b0da9635087d100b4e
 
 
-# Read in metacore object 
-load(metacore_example("pilot_ADaM.rda"))
-metacore <- metacore %>% 
-  select_dataset("ADSL")
-
-metacore$ds_vars
-
-
-
-#auxiliar functions
 format_eoxxstt_nodef <- function(x) {
   case_when(
     x == "COMPLETED" ~ "COMPLETED",
@@ -95,6 +97,261 @@ format_armn <- function(x) {
     TRUE ~ 99
   )
 }
+
+# Read in input SDTM data 
+data("admiral_dm")
+data("admiral_ex")
+dm <- read_xpt("sdtm/dm.xpt")
+ds <- read_xpt("sdtm/ds.xpt")
+ex <- read_xpt("sdtm/ex.xpt")
+vs <- read_xpt("sdtm/vs.xpt")
+qs <- read_xpt("sdtm/qs.xpt")
+mh <- read_xpt("sdtm/mh.xpt")
+sv <- read_xpt("sdtm/sv.xpt")
+my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
+
+
+# Read in metacore object 
+load(metacore_example("pilot_ADaM.rda"))
+metacore <- metacore %>% 
+  select_dataset("ADSL")
+
+metacore$ds_vars
+
+
+
+# auxiliar functions
+
+
+
+# kyle playtime -----------------------------------------------------------
+
+# ==============================
+
+format_armn <- function(x) {
+  case_when(
+    x=="Placebo" ~ 0,
+    x=="Xanomeline Low Dose" ~ 1,
+    x=="Xanomeline High Dose" ~ 2,
+    TRUE ~ 99
+  )}
+  
+format_trt01pn <- function(x) {
+  case_when(
+    x =="Placebo" ~ 0,
+    x =="Xanomeline Low Dose" ~ 54,
+    x =="Xanomeline High Dose" ~ 81,
+    TRUE ~ 99
+  )}
+
+# calculate treatment duration --------------------------------------------
+
+# get start date
+
+sv_3 = sv %>% 
+  
+  filter(VISITNUM == 3)
+
+# get end date
+
+ex_last = ex %>% 
+  
+  group_by(USUBJID) %>% 
+  
+  arrange(as.Date(EXENDTC)) %>%
+  
+  slice(n())
+
+# check if last date worked
+
+max((ex_last %>% count(USUBJID))$n)
+
+is.na((ex_last %>% count(USUBJID))$n)
+
+# try to merge the df 's
+
+# dur_df = merge(x = (sv_3 %>% select(USUBJID, SVSTDTC)),
+#                
+#                y = (ex_last %>% select(USUBJID, EXENDTC)),
+#                
+#                by.x = sv_3$USUBJID)
+          
+
+# let's hack it instead
+
+sv_3_id = sv_3 %>% 
+  
+  arrange(USUBJID) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+ex_last_id = ex_last %>% 
+  
+  arrange(USUBJID) %>% 
+  
+  select(USUBJID,
+         
+         EXENDTC)
+
+# merge and get trtdur per ID:
+
+dur_df = merge(sv_3_id,
+               
+               ex_last_id) %>% 
+  
+  mutate(
+    
+    TRTDUR = as.Date(EXENDTC) - as.Date(SVSTDTC) + 1
+    
+    )
+
+
+# build adsl from scratch -------------------------------------------------
+
+
+adsl <- dm %>% select(AGE,
+                      AGEU,
+                      ARM,
+                      DTHFL,
+                      ETHNIC,
+                      RACE,
+                      RFENDTC,
+                      RFSTDTC,
+                      SEX,
+                      SITEID,
+                      STUDYID,
+                      SUBJID,
+                      USUBJID) %>%
+  
+  mutate(ARMN = format_armn(ARM),
+         
+         TRT01PN = format_trt01pn(ARM))
+
+# combine adsl with treatment duration
+
+adsl_dur = merge(adsl,
+                 
+                 dur_df)
+
+# output didn't give same number of IDs as adsl, which don't match?
+
+difference = setdiff(adsl$USUBJID,
+                     
+                     dur_df$USUBJID)
+
+
+adsl_match = adsl %>% 
+  
+  filter(ARM != "Screen Failure")
+
+
+# follow up with Martha, Monday -------------------------------------------
+# merge the 254 that match, then tack back on the remainder
+
+adsl_dur = merge(adsl_match,
+                 dur_df)
+
+# the remainder are all screen failures
+# let's just add empty variables for them, and then rbind
+
+
+adsl_SF = adsl %>% 
+  
+  filter(ARM == "Screen Failure") %>% 
+  
+  mutate(SVSTDTC = NA,
+         EXENDTC = NA,
+         TRTDUR = NA
+         )
+
+
+# rbind it all together
+
+adsl_trtdur = rbind(adsl_dur,
+                    
+                    adsl_SF) 
+
+# pick back up on monday: add more variables in order? ------------------
+
+adsl_order = adsl_trtdur %>% 
+  
+  select(STUDYID,
+         USUBJID,
+         SUBJID,
+         SITEID,
+         #SITEGR1,
+         ARM,
+         #TRT01P,
+         TRT01PN,
+         #TRT01A,
+         #TRT01AN,
+         TRTSDT = SVSTDTC,
+         TRTEDT = EXENDTC,
+         TRTDURD = TRTDUR,
+         # AVGDD
+         # CUMDOSE
+         AGE,
+         # AGEGR1
+         # AGEGR1N
+         AGEU,
+         RACE,
+         # RACEN
+         SEX,
+         ETHNIC,
+         #...
+         DTHFL,
+         #...
+         RFSTDTC,
+         RFENDTC
+         )
+
+# SITEGR1
+# Sites do not appear pooled, they are specified, so equals SITEID
+# specify position in mutate to keep in order from spec sheet
+
+adsl_all = adsl_order %>% 
+  
+  mutate(SITEGR1 = SITEID,
+         .after = SITEID)
+
+# TRT01P
+# apparently this is just DM.ARM ? 
+
+adsl_all = adsl_all %>% 
+  
+  mutate(TRT01P = ARM,
+         
+         .after = ARM)
+
+# TRT01A
+# this is the actual treatment, which is the same as planned in this study
+
+adsl_all = adsl_all %>% 
+  
+  mutate(TRT01A = TRT01P,
+         
+         .after = TRT01PN)
+
+# TRT01AN
+# this is the actual treatment, which is the same as planned in this study
+# codelist for ARMN specifies this means "0, 54, 81"
+
+adsl_all = adsl_all %>% 
+  
+  mutate(TRT01AN = TRT01PN,
+         
+         .after = TRT01A)
+
+
+# AVGDD
+
+
+
+
+# more auxiliary ----------------------------------------------------------
+
 
 
 ##auxiliar DS

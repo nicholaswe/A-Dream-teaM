@@ -117,6 +117,75 @@ build_from_derived(specs,
 
 adsl_preds <- dm %>%
               transmute(AGE = AGE, AGEU = AGEU, ARM = ARM, DTHFL = DTHFL, ETHNIC = ETHNIC,
-                     RACE = RACE, RFENDTC = RFENDTC, RFSTDTC = RFSTDTC, SEX = SEX,
-                     SITEID = SITEID, STUDYID = STUDYID, SUBJID = SUBJID, USUBJID = USUBJID,
-                     TRT01P = ARM, TRT01A = ACTARM)
+                        RACE = RACE, RFENDTC = RFENDTC, RFSTDTC = RFSTDTC, SEX = SEX,
+                        SITEID = SITEID, STUDYID = STUDYID, SUBJID = SUBJID, USUBJID = USUBJID,
+                        TRT01P = ARM, TRT01A = ACTARM)
+
+
+adsl_ct <- adsl_preds %>% 
+           create_cat_var(specs, 
+                          ref_var = AGE, 
+                          grp_var = AGEGR1, 
+                          num_grp_var = AGEGR1N) %>% 
+           create_var_from_codelist(specs, 
+                                    input_var = RACE, 
+                                    out_var = RACEN) %>% 
+           # Removing screen failures from ARM and TRT01P to match the define and FDA guidence
+           mutate(ARM = if_else(ARM == "Screen Failure", NA_character_, ARM),
+                  TRT01P = case_when(
+                           TRT01P == "Screen Failure" ~ NA_character_,
+                           TRUE ~ TRT01P)
+           )
+
+### DCDECOD
+
+PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
+
+DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>% 
+  mutate(DCDECOD = DSDECOD) %>% 
+select(USUBJID, DCDECOD)
+
+
+
+### VISNUMEN
+
+ds_aux <- ds %>% select(USUBJID, DSTERM, VISITNUM)
+
+ds_aux %<>% filter (DSTERM == "PROTOCOL COMPLETED") %>% 
+            mutate(VISNUMEN = case_when(
+                              VISITNUM == 13 & DSTERM == "PROTOCOL COMPLETED" ~ 12,
+                              TRUE ~ VISITNUM))
+            select(USUBJID, VISNUMEN)
+            
+            
+            
+### WEIGHTBL (we need to use only 1 significant digit)
+
+PRE_WEIGHTBL <- vs %>% select(USUBJID, VISITNUM, VSTESTCD, VSSTRESN)
+            
+WEIGHTBL <- PRE_WEIGHTBL %>%  filter (VSTESTCD == "WEIGHT" & VISITNUM == 3) %>% 
+              mutate(WEIGHTBL = VSSTRESN) %>% 
+              select(USUBJID, WEIGHTBL)
+
+
+
+### HEIGHTBL (we need to use only 1 significant digit)
+
+PRE_HEIGHTBL <- vs %>% select(USUBJID, VISITNUM, VSTESTCD, VSSTRESN)
+
+HEIGHTBL <- PRE_HEIGHTBL %>%  filter (VSTESTCD == "HEIGHT" & VISITNUM == 1) %>% 
+  mutate(HEIGHTBL = VSSTRESN) %>% 
+  select(USUBJID, HEIGHTBL)
+
+
+### EDUCLVL
+
+PRE_EDUCLVL <- sc %>% select(USUBJID, SCSTRESN, SCTESTCD)
+
+EDUCLVL <- PRE_EDUCLVL %>%  filter (SCTESTCD == "EDLEVEL") %>% 
+  mutate(EDUCLVL = SCSTRESN) %>% 
+  select(USUBJID, EDUCLVL)
+  
+# Next (last) step: merge with ADSL
+
+
