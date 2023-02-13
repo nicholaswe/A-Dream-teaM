@@ -1,7 +1,22 @@
 # running the pharmaverse end-to-end ADSL example in blocks
 
+
+# install.packages("metacore")
+
 # kyle token
 # ghp_EE6POQTZoT70TJ045SXStkr5xayoV13shCGd
+
+
+# Kyle sign-in process...
+
+#  usethis::use_git_config(user.name = "kyleireton",
+#                          user.email = "kyle.ireton@gmail.com")
+
+#  gitcreds::gitcreds_set()
+
+#  Enter token: ghp_ #
+#  hXHuKYbIXE1eBQOaItxsA6sibH4Iqo1l2rQy
+
 
 # call our libraries ------------------------------------------------------
 
@@ -22,6 +37,20 @@ library(stringr)
 library(haven)
 library(readxl)
 
+# Read in input SDTM data 
+data("admiral_dm")
+data("admiral_ex")
+
+dm <- read_xpt("sdtm/dm.xpt")
+ds <- read_xpt("sdtm/ds.xpt")
+ex <- read_xpt("sdtm/ex.xpt")
+vs <- read_xpt("sdtm/vs.xpt")
+qs <- read_xpt("sdtm/qs.xpt")
+mh <- read_xpt("sdtm/mh.xpt")
+sv <- read_xpt("sdtm/sv.xpt")
+
+my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
+
 # auxiliary functions -----------------------------------------------------
 
 
@@ -39,7 +68,6 @@ format_agegr1n <- function(x) {
     x > 80 ~ 3
   )
 }
-
 
 format_agegr1 <- function(x) {
   case_when(
@@ -146,7 +174,7 @@ ex_last = ex %>%
 
 max((ex_last %>% count(USUBJID))$n)
 
-is.na((ex_last %>% count(USUBJID))$n)
+max(is.na((ex_last %>% count(USUBJID))$n))
 
 # try to merge the df 's
 
@@ -191,19 +219,21 @@ dur_df = merge(sv_3_id,
 # build adsl from scratch -------------------------------------------------
 
 
-adsl <- dm %>% select(AGE,
-                      AGEU,
-                      ARM,
-                      DTHFL,
-                      ETHNIC,
-                      RACE,
-                      RFENDTC,
-                      RFSTDTC,
-                      SEX,
-                      SITEID,
-                      STUDYID,
-                      SUBJID,
-                      USUBJID) %>%
+adsl_dm <- dm %>%
+  
+  select(AGE,
+         AGEU,
+         ARM,
+         DTHFL,
+         ETHNIC,
+         RACE,
+         RFENDTC,
+         RFSTDTC,
+         SEX,
+         SITEID,
+         STUDYID,
+         SUBJID,
+         USUBJID) %>%
   
   mutate(ARMN = format_armn(ARM),
          
@@ -211,18 +241,18 @@ adsl <- dm %>% select(AGE,
 
 # combine adsl with treatment duration
 
-adsl_dur = merge(adsl,
+adsl_dur = merge(adsl_dm,
                  
                  dur_df)
 
 # output didn't give same number of IDs as adsl, which don't match?
 
-difference = setdiff(adsl$USUBJID,
+difference = setdiff(adsl_dm$USUBJID,
                      
                      dur_df$USUBJID)
 
 
-adsl_match = adsl %>% 
+adsl_match = adsl_dm %>% 
   
   filter(ARM != "Screen Failure")
 
@@ -231,13 +261,14 @@ adsl_match = adsl %>%
 # merge the 254 that match, then tack back on the remainder
 
 adsl_dur = merge(adsl_match,
+                 
                  dur_df)
 
 # the remainder are all screen failures
 # let's just add empty variables for them, and then rbind
 
 
-adsl_SF = adsl %>% 
+adsl_SF = adsl_dm %>% 
   
   filter(ARM == "Screen Failure") %>% 
   
@@ -252,6 +283,7 @@ adsl_SF = adsl %>%
 adsl_trtdur = rbind(adsl_dur,
                     
                     adsl_SF) 
+
 
 # pick back up on monday: add more variables in order? ------------------
 
@@ -326,6 +358,8 @@ adsl_all = adsl_all %>%
 
 
 # AVGDD
+
+
 
 
 
@@ -471,6 +505,50 @@ adsla <- adsl %>%
     analysis_var = QSORRES,
     summary_fun =function(x) sum(x, na.rm = TRUE)
   )
+
+
+
+# ==============================
+
+format_armn <- function(x) {
+  case_when(
+    x=="Placebo" ~ 0,
+    x=="Xanomeline Low Dose" ~1,
+    x=="Xanomeline High Dose" ~2,
+    TRUE ~ 99
+  )
+}
+
+format_trt01pn <- function(x) {
+  case_when(
+    x=="Placebo" ~ 0,
+    x=="Xanomeline Low Dose" ~54,
+    x=="Xanomeline High Dose" ~81,
+    TRUE ~ 99
+  )
+}
+
+adsl<-dm %>% select(AGE,
+                    AGEU,
+                    ARM,
+                    DTHFL,
+                    ETHNIC,
+                    RACE,
+                    RFENDTC,
+                    RFSTDTC,
+                    SEX,
+                    SITEID,
+                    STUDYID,
+                    SUBJID,
+                    USUBJID) %>%
+  mutate(ARMN=format_armn(ARM),
+         TRT01PN=format_trt01pn(ARM),
+         TRTDUR=TRTEDT-TRTSDT+1) # %>%
+  
+  
+  
+  
+
 
 
 
