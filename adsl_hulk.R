@@ -1,10 +1,23 @@
 # running the pharmaverse end-to-end ADSL example in blocks
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 # install.packages("metacore")
 =======
 # kyle token
 # ghp_EE6POQTZoT70TJ045SXStkr5xayoV13shCGd
+=======
+
+# Kyle sign-in process...
+
+#  usethis::use_git_config(user.name = "kyleireton",
+#                          user.email = "kyle.ireton@gmail.com")
+
+#  gitcreds::gitcreds_set()
+
+#  Enter token: ghp_ #
+#  hXHuKYbIXE1eBQOaItxsA6sibH4Iqo1l2rQy
+>>>>>>> 10b816c870772c90f5943a9cead2761c80ffb49e
 
 # call our libraries ------------------------------------------------------
 
