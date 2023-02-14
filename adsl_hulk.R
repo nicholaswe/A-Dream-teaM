@@ -1,7 +1,7 @@
 # running the pharmaverse end-to-end ADSL example in blocks
 
 
-# install.packages("metacore")
+# install.packages("admiral")
 
 # kyle token
 # ghp_EE6POQTZoT70TJ045SXStkr5xayoV13shCGd
@@ -24,6 +24,8 @@
 options(repos = c(
   pharmaverse = 'https://pharmaverse.r-universe.dev',
   CRAN = 'https://cloud.r-project.org'))
+
+
 
 library(metacore)
 library(metatools)
