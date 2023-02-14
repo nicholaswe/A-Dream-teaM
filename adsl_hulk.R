@@ -439,7 +439,11 @@ adsl_all = adsl_all %>%
 
 # RACEN 
 
+adsl_all = adsl_all %>% 
+  
+  mutate(RACEN = format_racen(RACE),
 
+        .after = RACE )
 
 
 
