@@ -184,8 +184,7 @@ adsl_trt <- adsl_ct %>%
 
 
 
-
-### DCDECOD
+### DCDECOD (WE ARE SKIPPING THIS ONE)
 
 PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
 
@@ -198,7 +197,7 @@ DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>%
 
 
 
-### VISNUMEN
+### VISNUMEN (retrievieng an error here)
 
 ds_aux <- ds %>% select(USUBJID, DSTERM, VISITNUM)
 
@@ -262,7 +261,15 @@ DISONSDT <- mh %>% select(USUBJID, MHSTDTC, MHCAT) %>%
 ###   TRTSDT
 
 TRTSDT <-  sv %>% select(USUBJID, SVSTDTC, VISITNUM) %>% 
-  filter(VISITNUM == 3)   
+  filter(VISITNUM == 3) 
+
+
+###   COMP16FL
+
+PRE_COMP16FL <- sv %>% select(USUBJID, VISITNUM, SVSTDTC) %>% 
+  filter(VISITNUM == 10) 
+
+COMP16FL <- left_join(PRE_COMP16FL, adsl_preds %>%  select(USUBJID, RFENDTC),  by = "USUBJID")
 
 
 # Next (last) step: merge with ADSL
