@@ -10,6 +10,7 @@ library(dplyr)
 library(tidyr)
 library(lubridate)
 library(stringr)
+library(magrittr)
 
 
 # Reading domains ---------------------------------------------------------
@@ -186,45 +187,61 @@ adsl_trt <- adsl_ct %>%
 
 ### DCDECOD (WE ARE SKIPPING THIS ONE)
 
-PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
+# PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
+# 
+# DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>% 
+#                             mutate(DCDECOD = DSDECOD) %>% 
+#                             select(USUBJID, DCDECOD) %>% 
+#                             create_var_from_codelist(specs, 
+#                                                      input_var = DCDECOD, 
+#                                                      out_var = DCREASCD)
 
-DCDECOD <- PRE_DCDECOD %>%  filter (DSCAT == "DISPOSITION EVENT") %>% 
-                            mutate(DCDECOD = DSDECOD) %>% 
-                            select(USUBJID, DCDECOD) %>% 
-                            create_var_from_codelist(specs, 
-                                                     input_var = DCDECOD, 
-                                                     out_var = DCREASCD)
+DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT) %>% 
+                  filter (DSCAT == "DISPOSITION EVENT") %>% 
+                  mutate(DCDECOD = DSDECOD ) %>% 
+                  select(USUBJID, DCDECOD)
+
+### DCREASCD
+
+DCREASCD <- DCDECOD %>% mutate(DCREASCD = DCDECOD) %>% 
+            select(USUBJID, DCREASCD)
+
+### DISCONFL
+
+DISCONFL <-  DCREASCD %>% 
+             mutate( DISCONFL = if_else(toupper(DCREASCD) != "COMPLETED","Y","")) %>% 
+             select(USUBJID, DISCONFL)
+             
 
 
-
-### VISNUMEN (retrievieng an error here)
+### VISNUMEN 
 
 ds_aux <- ds %>% select(USUBJID, DSTERM, VISITNUM)
 
 ds_aux %<>% filter (DSTERM == "PROTOCOL COMPLETED") %>% 
             mutate(VISNUMEN = case_when(
                               VISITNUM == 13 & DSTERM == "PROTOCOL COMPLETED" ~ 12,
-                              TRUE ~ VISITNUM))
+                              TRUE ~ VISITNUM))%>% 
             select(USUBJID, VISNUMEN)
             
             
             
-### WEIGHTBL (we need to use only 1 significant digit)
+### WEIGHTBL
 
 PRE_WEIGHTBL <- vs %>% select(USUBJID, VISITNUM, VSTESTCD, VSSTRESN)
             
 WEIGHTBL <- PRE_WEIGHTBL %>%  filter (VSTESTCD == "WEIGHT" & VISITNUM == 3) %>% 
-              mutate(WEIGHTBL = VSSTRESN) %>% 
-              select(USUBJID, WEIGHTBL)
+              mutate(WEIGHTBL = VSSTRESN %>% round(.,1)) %>% 
+              select(USUBJID, WEIGHTBL )
 
 
 
-### HEIGHTBL (we need to use only 1 significant digit)
+### HEIGHTBL
 
 PRE_HEIGHTBL <- vs %>% select(USUBJID, VISITNUM, VSTESTCD, VSSTRESN)
 
 HEIGHTBL <- PRE_HEIGHTBL %>%  filter (VSTESTCD == "HEIGHT" & VISITNUM == 1) %>% 
-  mutate(HEIGHTBL = VSSTRESN) %>% 
+  mutate(HEIGHTBL = VSSTRESN  %>% round(.,1)) %>% 
   select(USUBJID, HEIGHTBL)
 
 
@@ -256,12 +273,25 @@ MMSETOT <-  qs %>% select(USUBJID, QSORRES, QSCAT) %>%
 ###   DISONSDT
 
 DISONSDT <- mh %>% select(USUBJID, MHSTDTC, MHCAT) %>% 
-            filter(MHCAT == "PRIMARY DIAGNOSIS")     
+            filter(MHCAT == "PRIMARY DIAGNOSIS")   %>% 
+            mutate(DISONSDT = MHSTDTC %>% ymd)  %>% 
+            select(USUBJID, DISONSDT)
 
 ###   TRTSDT
 
 TRTSDT <-  sv %>% select(USUBJID, SVSTDTC, VISITNUM) %>% 
-  filter(VISITNUM == 3) 
+                  filter(VISITNUM == 3) %>% 
+                  mutate(TRTSDT = SVSTDTC %>% ymd)  %>% 
+                  select(USUBJID, TRTSDT)
+
+###  TRTEDT
+
+PRE_TRTEDT <- ex %>% select(USUBJID, EXENDTC, VISITNUM, VISIT, EXDOSE) %>% 
+              group_by(USUBJID) %>% 
+              filter(row_number()==n())
+
+  
+  TRTEDT  <- left_join(PRE_COMP16FL, adsl_preds %>%  select(USUBJID, RFENDTC),  by = "USUBJID")
 
 
 ###   COMP16FL
@@ -272,6 +302,7 @@ PRE_COMP16FL <- sv %>% select(USUBJID, VISITNUM, SVSTDTC) %>%
 COMP16FL <- left_join(PRE_COMP16FL, adsl_preds %>%  select(USUBJID, RFENDTC),  by = "USUBJID")
 
 
+#table(ex$EXDOSE, ex$EXTRT)
 # Next (last) step: merge with ADSL
 
 
