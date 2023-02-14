@@ -132,6 +132,7 @@ format_trt01pn <- function(x) {
 # Read in input SDTM data 
 data("admiral_dm")
 data("admiral_ex")
+
 dm <- read_xpt("sdtm/dm.xpt")
 ds <- read_xpt("sdtm/ds.xpt")
 ex <- read_xpt("sdtm/ex.xpt")
@@ -139,6 +140,7 @@ vs <- read_xpt("sdtm/vs.xpt")
 qs <- read_xpt("sdtm/qs.xpt")
 mh <- read_xpt("sdtm/mh.xpt")
 sv <- read_xpt("sdtm/sv.xpt")
+
 my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
 
 
@@ -150,6 +152,35 @@ metacore <- metacore %>%
 metacore$ds_vars
 
 ```
+
+
+
+
+```{r}
+# build adsl from scratch -------------------------------------------------
+
+
+adsl_dm <- dm %>%
+  
+  select(AGE,
+         AGEU,
+         ARM,
+         DTHFL,
+         ETHNIC,
+         RACE,
+         RFENDTC,
+         RFSTDTC,
+         SEX,
+         SITEID,
+         STUDYID,
+         SUBJID,
+         USUBJID) %>%
+  
+  mutate(ARMN = format_armn(ARM),
+         
+         TRT01PN = format_trt01pn(ARM))
+```
+
 
 
 ```{r}
@@ -222,30 +253,6 @@ dur_df = merge(sv_3_id,
 
 
 ```{r}
-
-# build adsl from scratch -------------------------------------------------
-
-
-adsl_dm <- dm %>%
-  
-  select(AGE,
-         AGEU,
-         ARM,
-         DTHFL,
-         ETHNIC,
-         RACE,
-         RFENDTC,
-         RFSTDTC,
-         SEX,
-         SITEID,
-         STUDYID,
-         SUBJID,
-         USUBJID) %>%
-  
-  mutate(ARMN = format_armn(ARM),
-         
-         TRT01PN = format_trt01pn(ARM))
-
 # combine adsl with treatment duration
 
 adsl_dur = merge(adsl_dm,
@@ -294,8 +301,9 @@ adsl_trtdur = rbind(adsl_dur,
 
 ```
 
-```{r}
 
+
+```{r}
 # pick back up on monday: add more variables in order? ------------------
 
 adsl_order = adsl_trtdur %>% 
@@ -329,7 +337,12 @@ adsl_order = adsl_trtdur %>%
          RFSTDTC,
          RFENDTC
          )
+```
 
+
+
+
+```{r}
 # SITEGR1
 # Sites are pooled if there are fewer than 3 patients per site
 
@@ -375,9 +388,10 @@ adsl_alt = adsl_order %>%
     by_vars = vars(SITEID)
     
     )
+```
 
 
-
+```{r}
 # TRT01P
 # apparently this is just DM.ARM ? 
 
@@ -405,7 +419,12 @@ adsl_all = adsl_all %>%
   mutate(TRT01AN = TRT01PN,
          
          .after = TRT01A)
+```
 
+
+Programming this was complicated so we will finish other variables first
+
+```{r}
 
 # AVGDD
 
@@ -415,7 +434,10 @@ adsl_all = adsl_all %>%
 
 # 54 for int 1, then 81 for int 2, then 54 for int 3
 
+```
 
+
+```{r}
 # AGEGR1
 # AGEGR1 = 1 if AGE <65. AGEGR1 = 2 if AGE 65-80. AGEGR1 = 3 if AGE >80
 
@@ -446,7 +468,10 @@ adsl_all = adsl_all %>%
   ),
   
   .after = AGEGR1)
+```
 
+
+```{r}
 
 # RACEN 
 
@@ -459,6 +484,180 @@ adsl_all = adsl_all %>%
 
 
 ```
+
+
+ITTFL
+
+"Y if ARMCD ne ' '. N otherwise"
+
+```{r}
+
+adsl_all = adsl_all %>% 
+  
+  mutate(ITTFL = case_when(
+    
+    ARM != "Screen Failure" ~ "Y",
+    
+    TRUE ~ "N"
+    
+  ),
+  
+  .after = ETHNIC)
+
+```
+
+SAFFL
+
+"'Y' if ITTFL='Y' and TRTSDT ne missing. 'N' otherwise"
+
+```{r}
+
+adsl_all = adsl_all %>% 
+  
+  mutate(SAFFL = case_when(
+    
+    ITTFL == "Y" & !is.na(TRTSDT) ~ "Y",
+    
+    ITTFL == "N" ~ "N"
+    
+  ),
+  
+  .after = ITTFL)
+
+```
+
+
+EFFFL
+
+'Y' if SAFFL='Y' 
+AND subject has at least one record in QS for 'ADAS-Cog' with VISITNUM > 3 
+AND at least one record in QS for 'CIBIC+' with VISITNUM > 3,
+'N' otherwise
+
+
+First, let's check qs...
+
+```{r}
+
+qs <- read_xpt("sdtm/qs.xpt")
+
+```
+
+let's figure out which patients had CIBIC and ADAS-Cog scores
+
+```{r}
+
+# CIBIC
+
+CIBIC = qs %>% 
+  
+  arrange(VISITNUM) %>% 
+  
+  filter(QSTESTCD == "CIBIC") %>% 
+  
+  group_by(USUBJID) %>% 
+  
+  slice(n()) %>% 
+  
+  ungroup()
+
+```
+
+```{r}
+
+# ADAS
+
+ADAS = qs %>% 
+  
+  arrange(VISITNUM) %>% 
+  
+  filter(str_detect(QSTEST, "ADAS-COG")) %>% 
+  
+  group_by(USUBJID) %>% 
+  
+  slice(n()) %>% 
+  
+  ungroup()
+
+```
+
+find overlap in subjects between CIBIC and ACOG
+then, confirm they have visitnum > 3
+
+```{r}
+
+# which IDs don't match both?
+
+# this gives FALSE if the USUBJID does not have both ADAS and CIBIC
+
+difference_ADAS = ADAS %>% 
+  
+  mutate(common = ADAS$USUBJID %in% CIBIC$USUBJID) %>% 
+  
+  filter(common == "TRUE",
+         
+         VISITNUM > 3) %>% 
+  
+  select(USUBJID) %>% 
+  
+  mutate(EFFFL = "Y")
+
+```
+
+
+now, merge ADAS + CIBIC patients with full data
+and filter for SAFFL is Y
+
+```{r}
+
+EFFFL_Y = merge(adsl_all,
+      
+      difference_ADAS) %>% 
+  
+  filter(SAFFL == "Y")
+
+```
+
+these are all the patients for EFFFL
+so, filter these out of the original dataset and set all others to "N"
+then rbind back together!
+
+```{r}
+
+EFFFL_N = adsl_all %>% 
+  
+  filter(!(adsl_all$USUBJID %in% EFFFL_Y$USUBJID)) %>% 
+  
+  mutate(EFFFL = "N")
+
+```
+
+
+```{r}
+
+adsl_EFFFL = rbind(EFFFL_Y,
+                   EFFFL_N)
+
+adsl_EFFFL
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ```{r}
 
