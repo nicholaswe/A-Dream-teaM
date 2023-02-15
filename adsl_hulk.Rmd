@@ -127,6 +127,59 @@ format_trt01pn <- function(x) {
 ```
 
 
+visit num flag function (Kyle & Martha)
+
+```{r}
+
+
+flag_n <- function(n, df) {
+  
+sv_n = sv %>% 
+  
+  filter(VISITNUM == n) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+# combine these vist n IDS with main datset
+
+adsl_n = merge(df,
+               
+               sv_n) %>% 
+  
+  mutate(
+    
+    COMPnFL = case_when(
+      
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
+      
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
+      
+      ),
+    
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+
+
+adsl_n_N = df %>% 
+  
+  filter(!(df$USUBJID %in% adsl_n$USUBJID)) %>% 
+  
+  mutate(COMPnFL = "N")
+
+# add the non-visit 12 pts to visit 12 pts
+
+adsl_n_all = rbind((adsl_n %>% select(-SVSTDTC, -date_diff)),
+                   
+                   adsl_n_N) 
+
+return(adsl_n_all)
+
+
+  }
+
+```
+
 ```{r call in SDTM data}
 
 # Read in input SDTM data 
@@ -668,9 +721,9 @@ adsl_8 = merge(adsl_EFFFL,
     
     COMP8FL = case_when(
       
-      RFENDTC >= SVSTDTC ~ "Y",
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
       
-      RFENDTC < SVSTDTC ~ "N"
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
       
       ),
     
@@ -703,8 +756,6 @@ adsl_all = adsl_8_all
 ```
 
 
-
-
 *COMP16FL*
 
 'Y' if subject has a SV.VISITNUM=16 and RFENDTC >= date of visit *10* (SV.SVSTDTC), 'N' otherwise
@@ -730,9 +781,9 @@ adsl_10 = merge(adsl_all,
     
     COMP16FL = case_when(
       
-      RFENDTC >= SVSTDTC ~ "Y",
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
       
-      RFENDTC < SVSTDTC ~ "N"
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
       
       ),
     
@@ -791,9 +842,9 @@ adsl_12 = merge(adsl_all,
     
     COMP24FL = case_when(
       
-      RFENDTC >= SVSTDTC ~ "Y",
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
       
-      RFENDTC < SVSTDTC ~ "N"
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
       
       ),
     
@@ -826,11 +877,31 @@ adsl_all = adsl_12_all
 ```
 
 
+let's test flag_n? 
+
+```{r}
+
+flag_n(9, adsl_all) %>% 
+  
+  mutate(COMP9FL = COMPnFL) %>% 
+  
+  select(-COMPnFL)
+
+```
+
+
+
 *DISCONFL*
 
 Y_Blank type
 
-Y if DCREASCD ^= 'Completed'. Null otherwise
+Y if DCREASCD != 'Completed'. Null otherwise
+
+```{r}
+
+
+
+```
 
 
 
