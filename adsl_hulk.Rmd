@@ -693,12 +693,46 @@ adsl_EFFFL = rbind(EFFFL_Y,
 
 adsl_EFFFL
 
+adsl_all = adsl_EFFFL
+
 ```
 
+
+let's test flag_n? 
+
+```{r}
+
+flag_n(9, adsl_all) %>% 
+  
+  mutate(COMP9FL = COMPnFL) %>% 
+  
+  select(-COMPnFL)
+
+```
 
 *COMP8FL*
 
 'Y' if subject has a SV.VISITNUM=8 and RFENDTC >= date of visit 8 (SV.SVSTDTC), 'N' otherwise
+
+try this with flag_n() function
+
+```{r}
+
+adsl_comp8 = flag_n(8, adsl_all) %>% 
+  
+  rename(COMP8FL = COMPnFL)
+
+adsl_comp16 = flag_n(10, adsl_comp8) %>% 
+  
+  rename(COMP16FL = COMPnFL)
+
+adsl_comp24 = flag_n(12, adsl_comp16) %>% 
+  
+  rename(COMP24FL = COMPnFL)
+
+
+```
+
 
 
 ```{r}
@@ -751,7 +785,7 @@ adsl_8_all = rbind((adsl_8 %>% select(-SVSTDTC, -date_diff)),
 
 adsl_8_all
 
-adsl_all = adsl_8_all
+# adsl_all = adsl_8_all
 
 ```
 
@@ -811,7 +845,7 @@ adsl_10_all = rbind((adsl_10 %>% select(-SVSTDTC, -date_diff)),
 
 adsl_10_all
 
-adsl_all = adsl_10_all
+# adsl_all = adsl_10_all
 
 ```
 
@@ -872,22 +906,12 @@ adsl_12_all = rbind((adsl_12 %>% select(-SVSTDTC, -date_diff)),
 
 adsl_12_all
 
-adsl_all = adsl_12_all
+# adsl_all = adsl_12_all
 
 ```
 
 
-let's test flag_n? 
 
-```{r}
-
-flag_n(9, adsl_all) %>% 
-  
-  mutate(COMP9FL = COMPnFL) %>% 
-  
-  select(-COMPnFL)
-
-```
 
 
 
