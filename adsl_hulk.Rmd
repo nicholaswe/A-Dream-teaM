@@ -527,7 +527,7 @@ adsl_all = adsl_all %>%
 ```
 
 
-EFFFL
+*EFFFL*
 
 'Y' if SAFFL='Y' 
 AND subject has at least one record in QS for 'ADAS-Cog' with VISITNUM > 3 
@@ -643,6 +643,194 @@ adsl_EFFFL
 ```
 
 
+*COMP8FL*
+
+'Y' if subject has a SV.VISITNUM=8 and RFENDTC >= date of visit 8 (SV.SVSTDTC), 'N' otherwise
+
+
+```{r}
+
+sv8 = sv %>% 
+  
+  filter(VISITNUM == 8) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+# combine these vist 8 IDS with main datset
+
+adsl_8 = merge(adsl_EFFFL,
+               
+               sv8) %>% 
+  
+  mutate(
+    
+    COMP8FL = case_when(
+      
+      RFENDTC >= SVSTDTC ~ "Y",
+      
+      RFENDTC < SVSTDTC ~ "N"
+      
+      ),
+    
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+
+str(adsl_8)
+
+unique(adsl_8$COMP8FL)
+
+min(adsl_8$date_diff)
+
+# all vist 8 pts had the right date condition, so all are yes
+# let's add back the non-vist 8 pts with the %in% strategy...
+
+adsl_8_N = adsl_EFFFL %>% 
+  
+  filter(!(adsl_EFFFL$USUBJID %in% adsl_8$USUBJID)) %>% 
+  
+  mutate(COMP8FL = "N")
+
+# add the non-visit 8 pts to visit 8 pts
+
+adsl_8_all = rbind((adsl_8 %>% select(-SVSTDTC, -date_diff)),
+                   adsl_8_N)
+
+adsl_8_all
+
+adsl_all = adsl_8_all
+
+```
+
+
+
+
+*COMP16FL*
+
+'Y' if subject has a SV.VISITNUM=16 and RFENDTC >= date of visit *10* (SV.SVSTDTC), 'N' otherwise
+
+
+```{r}
+
+sv10 = sv %>% 
+  
+  filter(VISITNUM == 10) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+# combine these vist 10 IDS with main datset
+
+adsl_10 = merge(adsl_all,
+               
+               sv10) %>% 
+  
+  mutate(
+    
+    COMP16FL = case_when(
+      
+      RFENDTC >= SVSTDTC ~ "Y",
+      
+      RFENDTC < SVSTDTC ~ "N"
+      
+      ),
+    
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+
+str(adsl_10)
+
+unique(adsl_10$COMP16FL)
+
+min(adsl_10$date_diff)
+
+# all vist 10 pts had the right date condition, so all are yes
+# let's add back the non-vist 10 pts with the %in% strategy...
+
+adsl_10_N = adsl_all %>% 
+  
+  filter(!(adsl_all$USUBJID %in% adsl_10$USUBJID)) %>% 
+  
+  mutate(COMP16FL = "N")
+
+# add the non-visit 10 pts to visit 10 pts
+
+adsl_10_all = rbind((adsl_10 %>% select(-SVSTDTC, -date_diff)),
+                   adsl_10_N)
+
+adsl_10_all
+
+adsl_all = adsl_10_all
+
+```
+
+
+
+*COMP24FL*
+
+'Y' if subject has a SV.VISITNUM=24 and RFENDTC >= date of visit *12* (SV.SVSTDTC), 'N' otherwise
+
+
+```{r}
+
+sv12 = sv %>% 
+  
+  filter(VISITNUM == 12) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+# combine these vist 12 IDS with main datset
+
+adsl_12 = merge(adsl_all,
+               
+               sv12) %>% 
+  
+  mutate(
+    
+    COMP24FL = case_when(
+      
+      RFENDTC >= SVSTDTC ~ "Y",
+      
+      RFENDTC < SVSTDTC ~ "N"
+      
+      ),
+    
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+
+str(adsl_12)
+
+unique(adsl_12$COMP24FL)
+
+min(adsl_12$date_diff)
+
+# all vist 12 pts had the right date condition, so all are yes
+# let's add back the non-vist 12 pts with the %in% strategy...
+
+adsl_12_N = adsl_all %>% 
+  
+  filter(!(adsl_all$USUBJID %in% adsl_12$USUBJID)) %>% 
+  
+  mutate(COMP24FL = "N")
+
+# add the non-visit 12 pts to visit 12 pts
+
+adsl_12_all = rbind((adsl_12 %>% select(-SVSTDTC, -date_diff)),
+                   adsl_12_N)
+
+adsl_12_all
+
+adsl_all = adsl_12_all
+
+```
+
+
+*DISCONFL*
+
+Y_Blank type
+
+Y if DCREASCD ^= 'Completed'. Null otherwise
 
 
 
@@ -653,11 +841,7 @@ adsl_EFFFL
 
 
 
-
-
-
-
-
+For Martha: You can click the arrow to the left to "uncollapse" the chunks below.
 
 ```{r}
 
