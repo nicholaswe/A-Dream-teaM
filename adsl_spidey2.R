@@ -316,11 +316,34 @@ PRE_COMP16FL_2 <- left_join(PRE_COMP16FL, adsl_preds %>%  select(USUBJID, RFENDT
 COMP16FL -  right_join(PRE_COMP16FL_2,  adsl_preds %>%  select(USUBJID),  by = "USUBJID")
 
 
-data_aux <- full_join(sv, adsl_preds, by ="USUBJID") %>% 
-            mutate(SVSTDTC = SVSTDTC %>% ymd, RFENDTC = RFENDTC %>% ymd) %>% 
-            mutate(COMP16FL = if_else(VISITNUM == 10 & RFENDTC>=SVSTDTC,"Y","N")) %>% 
-            select(USUBJID, VISITNUM, RFENDTC, SVSTDTC,  COMP16FL) %>% 
-            group_by(USUBJID)
+COMP16FL_NWE <- full_join(sv, adsl_preds, by ="USUBJID") %>% 
+                mutate(SVSTDTC = SVSTDTC %>% ymd, RFENDTC = RFENDTC %>% ymd) %>% 
+                mutate(COMP16FL_aux = if_else(VISITNUM == 10 & RFENDTC>=SVSTDTC,"Y","N")) %>% 
+                select(USUBJID, VISITNUM, RFENDTC, SVSTDTC,  COMP16FL_aux) %>% # Optional line
+                group_by(USUBJID) %>% 
+                mutate(COMP16FL = ifelse(any(str_detect(COMP16FL_aux, "Y")), "Y", "N")) %>% 
+                select(USUBJID, COMP16FL) %>%  
+                unique() 
+
+
+COMPxxFL <- function(sv, adsl, visitnum, xx){
+  
+out <-  full_join(sv, adsl, by ="USUBJID") %>% 
+                             mutate(SVSTDTC = SVSTDTC %>% ymd, RFENDTC = RFENDTC %>% ymd) %>% 
+                             mutate(aux = if_else(VISITNUM == visitnum & RFENDTC>=SVSTDTC,"Y","N")) %>% 
+                             select(USUBJID, VISITNUM, RFENDTC, SVSTDTC, aux) %>% # Optional line
+                             group_by(USUBJID) %>% 
+                             mutate(!!paste0("COMP", xx, "FL") := ifelse(any(str_detect(aux, "Y")), "Y", "N")) %>% 
+                             select(USUBJID, !!paste0("COMP", xx, "FL")) %>%  
+                             unique()
+  
+
+}
+
+COMP16FL <- COMPxxFL(sv, adsl_preds, 10, 16)
+COMP24FL <- COMPxxFL(sv, adsl_preds, 12, 24)
+COMP8FL <- COMPxxFL(sv, adsl_preds, 8, 8)
+
 
 #table(ex$EXDOSE, ex$EXTRT)
 # Next (last) step: merge with ADSL
