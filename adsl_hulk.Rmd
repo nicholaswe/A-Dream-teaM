@@ -740,7 +740,6 @@ adsl.all = adsl_comp24
 this is the basis of the "flag_n()" function
 
 ```{r}
-
 sv8 = sv %>% 
   
   filter(VISITNUM == 8) %>% 
@@ -749,6 +748,12 @@ sv8 = sv %>%
          
          SVSTDTC)
 
+sv8
+
+```
+
+
+```{r}
 # combine these vist 8 IDS with main datset
 
 adsl_8 = merge(adsl_EFFFL,
@@ -765,8 +770,14 @@ adsl_8 = merge(adsl_EFFFL,
       
       ),
     
-    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC))
 
+adsl_8
+
+```
+
+
+```{r}
 str(adsl_8)
 
 unique(adsl_8$COMP8FL)
@@ -775,6 +786,11 @@ min(adsl_8$date_diff)
 
 # all vist 8 pts had the right date condition, so all are yes
 # let's add back the non-vist 8 pts with the %in% strategy...
+
+```
+
+
+```{r}
 
 adsl_8_N = adsl_EFFFL %>% 
   
@@ -785,11 +801,17 @@ adsl_8_N = adsl_EFFFL %>%
 # add the non-visit 8 pts to visit 8 pts
 
 adsl_8_all = rbind((adsl_8 %>% select(-SVSTDTC, -date_diff)),
+                   
                    adsl_8_N)
 
 adsl_8_all
 
 # adsl.all = adsl_8_all
+
+```
+```{r}
+
+adsl_8_all$COMP8FL %>% table()
 
 ```
 
@@ -1110,11 +1132,14 @@ adsl.all = adsl.HEIGHTBL
 
 *WEIGHTBL*
 
-*FIX: ONE PT DROPPED BETWEEN VISITS 1 AND 3*
+*FIXED: ONE PT WITHDREW BETWEEN VISITS 1 AND 3*
+
+filtered with %in% of the visit3 pts, and made the remainder "" for this
+
 
 VSSTRESN when VS.VSTESTCD='WEIGHT' and VS.VISITNUM=3
 
-Otherwise, let's make it "" ? 
+Otherwise, let's make it ""
 
 
 ```{r}
@@ -1131,11 +1156,13 @@ vs.WEIGHTBL = vs %>%
   
   select(-VSSTRESN)
 
+
 adsl.SF.WEIGHTBL = adsl.all %>% 
   
-  filter(str_detect(ARM, "Screen Failure")) %>% 
+  filter(!(USUBJID %in% vs.WEIGHTBL$USUBJID)) %>% 
   
-  mutate(WEIGHTBL = "")
+    mutate(WEIGHTBL = "")
+
 
 adsl.WEIGHTBL.pre = merge(adsl.all,
                       
@@ -1147,7 +1174,65 @@ adsl.WEIGHTBL = rbind(adsl.WEIGHTBL.pre,
 
 adsl.WEIGHTBL
 
+adsl.all = adsl.WEIGHTBL
+
 ```
+
+
+
+*BMIBL*
+
+WEIGHTBL / ((HEIGHTBL/100)**2)
+
+```{r}
+
+adsl.BMIBL = adsl.all %>% 
+  
+  mutate(BMIBL = (as.numeric(paste(WEIGHTBL))) / ((as.numeric(paste(HEIGHTBL))) / 100)^2)
+
+adsl.BMIBL
+
+adsl.all = adsl.BMIBL
+
+```
+
+
+*BMIBLGR1*
+
+"BMIBLGR1=""<25"" if . < BMIBL <25.
+BMIBLGR1=""25-<30"" if 25 <=BMIBL <30.
+BMIBLGR1="">=30""if BMIBL >=30."
+
+
+```{r}
+
+adsl.BMIBLGR1 = adsl.all %>% 
+  
+  mutate(BMIBLGR1 = case_when(
+    
+    BMIBL < 25 ~ "<25",
+    BMIBL >= 25 & BMIBL <30 ~ "25-<30",
+    BMIBL >= 30 ~ ">=30"
+    
+  ))
+
+adsl.BMIBLGR1
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1336,4 +1421,26 @@ adsl<-dm %>% select(AGE,
          TRTDUR=TRTEDT-TRTSDT+1) # %>%
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
