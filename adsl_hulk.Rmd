@@ -127,6 +127,59 @@ format_trt01pn <- function(x) {
 ```
 
 
+visit num flag function (Kyle & Martha)
+
+```{r}
+
+
+flag_n <- function(n, df) {
+  
+sv_n = sv %>% 
+  
+  filter(VISITNUM == n) %>% 
+  
+  select(USUBJID,
+         
+         SVSTDTC)
+
+# combine these vist n IDS with main datset
+
+adsl_n = merge(df,
+               
+               sv_n) %>% 
+  
+  mutate(
+    
+    COMPnFL = case_when(
+      
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
+      
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
+      
+      ),
+    
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+
+
+adsl_n_N = df %>% 
+  
+  filter(!(df$USUBJID %in% adsl_n$USUBJID)) %>% 
+  
+  mutate(COMPnFL = "N")
+
+# add the non-visit 12 pts to visit 12 pts
+
+adsl_n_all = rbind((adsl_n %>% select(-SVSTDTC, -date_diff)),
+                   
+                   adsl_n_N) 
+
+return(adsl_n_all)
+
+
+  }
+
+```
+
 ```{r call in SDTM data}
 
 # Read in input SDTM data 
@@ -373,7 +426,7 @@ site_pool_n = adsl_order %>%
 # but we will not deal with programming it right now
 # let's combine SITEGR1 with the pooled group code
 
-adsl_all = merge(adsl_order,
+adsl.all = merge(adsl_order,
                  
                  site_pool_n)
 
@@ -395,7 +448,7 @@ adsl_alt = adsl_order %>%
 # TRT01P
 # apparently this is just DM.ARM ? 
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(TRT01P = ARM,
          
@@ -404,7 +457,7 @@ adsl_all = adsl_all %>%
 # TRT01A
 # this is the actual treatment, which is the same as planned in this study
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(TRT01A = TRT01P,
          
@@ -414,7 +467,7 @@ adsl_all = adsl_all %>%
 # this is the actual treatment, which is the same as planned in this study
 # codelist for ARMN specifies this means "0, 54, 81"
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(TRT01AN = TRT01PN,
          
@@ -441,7 +494,7 @@ Programming this was complicated so we will finish other variables first
 # AGEGR1
 # AGEGR1 = 1 if AGE <65. AGEGR1 = 2 if AGE 65-80. AGEGR1 = 3 if AGE >80
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(AGEGR1 = case_when(
     
@@ -457,7 +510,7 @@ adsl_all = adsl_all %>%
 # AGEGR1N
 # AGEGR1 = 1 if AGE <65. AGEGR1 = 2 if AGE 65-80. AGEGR1 = 3 if AGE >80
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(AGEGR1N = case_when(
     
@@ -475,7 +528,7 @@ adsl_all = adsl_all %>%
 
 # RACEN 
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(RACEN = format_racen(RACE),
 
@@ -492,7 +545,7 @@ ITTFL
 
 ```{r}
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(ITTFL = case_when(
     
@@ -512,7 +565,7 @@ SAFFL
 
 ```{r}
 
-adsl_all = adsl_all %>% 
+adsl.all = adsl.all %>% 
   
   mutate(SAFFL = case_when(
     
@@ -610,7 +663,7 @@ and filter for SAFFL is Y
 
 ```{r}
 
-EFFFL_Y = merge(adsl_all,
+EFFFL_Y = merge(adsl.all,
       
       difference_ADAS) %>% 
   
@@ -624,9 +677,9 @@ then rbind back together!
 
 ```{r}
 
-EFFFL_N = adsl_all %>% 
+EFFFL_N = adsl.all %>% 
   
-  filter(!(adsl_all$USUBJID %in% EFFFL_Y$USUBJID)) %>% 
+  filter(!(adsl.all$USUBJID %in% EFFFL_Y$USUBJID)) %>% 
   
   mutate(EFFFL = "N")
 
@@ -640,13 +693,51 @@ adsl_EFFFL = rbind(EFFFL_Y,
 
 adsl_EFFFL
 
+adsl.all = adsl_EFFFL
+
 ```
 
 
-*COMP8FL*
+let's test flag_n? 
+
+```{r}
+
+flag_n(9, adsl.all) %>% 
+  
+  mutate(COMP9FL = COMPnFL) %>% 
+  
+  select(-COMPnFL)
+
+```
+
+*COMP8FL - COMP24FL*
 
 'Y' if subject has a SV.VISITNUM=8 and RFENDTC >= date of visit 8 (SV.SVSTDTC), 'N' otherwise
 
+try this with flag_n() function
+
+```{r}
+
+adsl_comp8 = flag_n(8, adsl.all) %>% 
+  
+  rename(COMP8FL = COMPnFL)
+
+adsl_comp16 = flag_n(10, adsl_comp8) %>% 
+  
+  rename(COMP16FL = COMPnFL)
+
+adsl_comp24 = flag_n(12, adsl_comp16) %>% 
+  
+  rename(COMP24FL = COMPnFL)
+
+
+adsl.all = adsl_comp24
+
+```
+
+*COMP8FL manual*
+
+this is the basis of the "flag_n()" function
 
 ```{r}
 
@@ -668,9 +759,9 @@ adsl_8 = merge(adsl_EFFFL,
     
     COMP8FL = case_when(
       
-      RFENDTC >= SVSTDTC ~ "Y",
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
       
-      RFENDTC < SVSTDTC ~ "N"
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
       
       ),
     
@@ -698,14 +789,14 @@ adsl_8_all = rbind((adsl_8 %>% select(-SVSTDTC, -date_diff)),
 
 adsl_8_all
 
-adsl_all = adsl_8_all
+# adsl.all = adsl_8_all
 
 ```
 
 
+*COMP16FL manual*
 
-
-*COMP16FL*
+copying and pasting comp8fl code block
 
 'Y' if subject has a SV.VISITNUM=16 and RFENDTC >= date of visit *10* (SV.SVSTDTC), 'N' otherwise
 
@@ -722,7 +813,7 @@ sv10 = sv %>%
 
 # combine these vist 10 IDS with main datset
 
-adsl_10 = merge(adsl_all,
+adsl_10 = merge(adsl.all,
                
                sv10) %>% 
   
@@ -730,9 +821,9 @@ adsl_10 = merge(adsl_all,
     
     COMP16FL = case_when(
       
-      RFENDTC >= SVSTDTC ~ "Y",
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
       
-      RFENDTC < SVSTDTC ~ "N"
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
       
       ),
     
@@ -747,9 +838,9 @@ min(adsl_10$date_diff)
 # all vist 10 pts had the right date condition, so all are yes
 # let's add back the non-vist 10 pts with the %in% strategy...
 
-adsl_10_N = adsl_all %>% 
+adsl_10_N = adsl.all %>% 
   
-  filter(!(adsl_all$USUBJID %in% adsl_10$USUBJID)) %>% 
+  filter(!(adsl.all$USUBJID %in% adsl_10$USUBJID)) %>% 
   
   mutate(COMP16FL = "N")
 
@@ -760,13 +851,15 @@ adsl_10_all = rbind((adsl_10 %>% select(-SVSTDTC, -date_diff)),
 
 adsl_10_all
 
-adsl_all = adsl_10_all
+# adsl.all = adsl_10_all
 
 ```
 
 
 
-*COMP24FL*
+*COMP24FL manual*
+
+copying and pasting comp8fl code block
 
 'Y' if subject has a SV.VISITNUM=24 and RFENDTC >= date of visit *12* (SV.SVSTDTC), 'N' otherwise
 
@@ -783,7 +876,7 @@ sv12 = sv %>%
 
 # combine these vist 12 IDS with main datset
 
-adsl_12 = merge(adsl_all,
+adsl_12 = merge(adsl.all,
                
                sv12) %>% 
   
@@ -791,9 +884,9 @@ adsl_12 = merge(adsl_all,
     
     COMP24FL = case_when(
       
-      RFENDTC >= SVSTDTC ~ "Y",
+      as.Date(RFENDTC) >= as.Date(SVSTDTC) ~ "Y",
       
-      RFENDTC < SVSTDTC ~ "N"
+      as.Date(RFENDTC) < as.Date(SVSTDTC) ~ "N"
       
       ),
     
@@ -808,9 +901,9 @@ min(adsl_12$date_diff)
 # all vist 12 pts had the right date condition, so all are yes
 # let's add back the non-vist 12 pts with the %in% strategy...
 
-adsl_12_N = adsl_all %>% 
+adsl_12_N = adsl.all %>% 
   
-  filter(!(adsl_all$USUBJID %in% adsl_12$USUBJID)) %>% 
+  filter(!(adsl.all$USUBJID %in% adsl_12$USUBJID)) %>% 
   
   mutate(COMP24FL = "N")
 
@@ -821,27 +914,245 @@ adsl_12_all = rbind((adsl_12 %>% select(-SVSTDTC, -date_diff)),
 
 adsl_12_all
 
-adsl_all = adsl_12_all
+# adsl.all = adsl_12_all
+
+```
+
+
+
+
+
+
+*DCDECOD*
+
+DS.DSDECOD where DSCAT='DISPOSITION EVENT'
+
+```{r}
+
+ds.DCDECOD = ds %>%
+  
+  filter(DSCAT == "DISPOSITION EVENT") %>% 
+  
+  select(USUBJID, DSDECOD)
+
+adsl.DCDECOD = merge(adsl.all,
+                   
+                   ds.DCDECOD) %>% 
+  
+  rename(DCDECOD = DSDECOD)
+
+adsl.DCDECOD
+
+
+adsl.all = adsl.DCDECOD
+```
+
+
+*DCSREAS*
+
+I think this is just the lower case version (first letter capital) of DCDECOD
+
+```{r}
+
+adsl.DCSREAS = adsl.all %>%
+  
+  mutate(DSCREAS = str_to_title(adsl.all$DCDECOD))
+
+adsl.DCSREAS
+
+adsl.all = adsl.DCSREAS
 
 ```
 
 
 *DISCONFL*
 
-Y_Blank type
+Y_Blank type (Y or NULL)
 
-Y if DCREASCD ^= 'Completed'. Null otherwise
+Y if DCREASCD != 'Completed'. Null otherwise
+--> this should be "DCREAS" in the current adsl variables
 
-
-
-
-
+(the spec order didn't make sense; DCDECOD and DCREAS should come first...)
 
 
+```{r}
+
+adsl.DISCONFL = adsl.all %>% 
+  
+  mutate(
+    
+    DISCONFL = case_when(
+      
+      DSCREAS != "Completed" ~ "Y",
+      
+      TRUE ~ ""
+      
+      )
+    
+    )
+
+adsl.DISCONFL
+
+adsl.all = adsl.DISCONFL
+
+```
+
+*DSRAEFL*
+
+Y if DCREASCD='Adverse Event'. Null otherwise
+
+```{r}
+
+adsl.DSRAEFL = adsl.all %>% 
+  
+  mutate(
+    
+    DSRAEFL = case_when(
+      
+      DSCREAS == "Adverse Event" ~ "Y",
+      
+      TRUE ~ ""
+      
+      )
+    
+    )
+
+adsl.DSRAEFL
+
+adsl.all = adsl.DSRAEFL
+
+
+```
 
 
 
-For Martha: You can click the arrow to the left to "uncollapse" the chunks below.
+*DTHFL*
+
+description is just "DM.DTHFL"
+
+```{r}
+
+dm.DTHFL = dm %>% 
+  
+  select(USUBJID,
+         
+         DTHFL)
+
+adsl.DTHFL = merge(adsl.all,
+                   
+                   dm.DTHFL) %>% 
+  
+  mutate(DTHFL2 = DTHFL,
+         
+         .after = DSRAEFL) %>% 
+  
+  select(-DTHFL) %>% 
+  
+  rename(DTHFL = DTHFL2)
+
+adsl.DTHFL
+
+adsl.all = adsl.DTHFL
+
+```
+
+
+*Checking flag output!*
+
+```{r}
+
+adsl.all
+
+```
+
+*HEIGHTBL*
+
+VSSTRESN when VS.VSTESTCD='HEIGHT' and VS.VISITNUM=1
+
+Otherwise, let's make it "" ? 
+
+
+```{r}
+
+vs.HEIGHTBL = vs %>% 
+  
+  filter(VSTESTCD == "HEIGHT" & VISITNUM == 1) %>% 
+  
+  select(USUBJID,
+         
+         VSSTRESN) %>% 
+  
+  mutate(HEIGHTBL = VSSTRESN) %>% 
+  
+  select(-VSSTRESN)
+
+adsl.SF.HEIGHTBL = adsl.all %>% 
+  
+  filter(str_detect(ARM, "Screen Failure")) %>% 
+  
+  mutate(HEIGHTBL = "")
+
+adsl.HEIGHTBL.pre = merge(adsl.all,
+                      
+                      vs.HEIGHTBL)
+
+adsl.HEIGHTBL = rbind(adsl.HEIGHTBL.pre,
+                      
+                      adsl.SF.HEIGHTBL)
+
+adsl.HEIGHTBL
+
+adsl.all = adsl.HEIGHTBL
+
+```
+
+
+
+*WEIGHTBL*
+
+*FIX: ONE PT DROPPED BETWEEN VISITS 1 AND 3*
+
+VSSTRESN when VS.VSTESTCD='WEIGHT' and VS.VISITNUM=3
+
+Otherwise, let's make it "" ? 
+
+
+```{r}
+
+vs.WEIGHTBL = vs %>% 
+  
+  filter(VSTESTCD == "WEIGHT" & VISITNUM == 3) %>% 
+  
+  select(USUBJID,
+         
+         VSSTRESN) %>% 
+  
+  mutate(WEIGHTBL = VSSTRESN) %>% 
+  
+  select(-VSSTRESN)
+
+adsl.SF.WEIGHTBL = adsl.all %>% 
+  
+  filter(str_detect(ARM, "Screen Failure")) %>% 
+  
+  mutate(WEIGHTBL = "")
+
+adsl.WEIGHTBL.pre = merge(adsl.all,
+                      
+                      vs.WEIGHTBL)
+
+adsl.WEIGHTBL = rbind(adsl.WEIGHTBL.pre,
+                      
+                      adsl.SF.WEIGHTBL)
+
+adsl.WEIGHTBL
+
+```
+
+
+
+
+For Martha: You can click the arrow to the left to "collapse" the chunks below.
 
 ```{r}
 
