@@ -98,23 +98,24 @@ format_racen <- function(x) {
   )
 }
 
+# format_armn <- function(x) {
+#   case_when(
+#     x=="Placebo" ~ 0,
+#     x=="Xanomeline Low Dose" ~ 1,
+#     x=="Xanomeline High Dose" ~ 2,
+#     TRUE ~ 99
+#   )}
 
 format_armn <- function(x) {
   case_when(
     x=="Placebo" ~ 0,
-    x=="Xanomeline Low Dose" ~54,
-    x=="Xanomeline High Dose" ~81,
+    x=="Xanomeline Low Dose" ~ 54,
+    x=="Xanomeline High Dose" ~ 81,
     TRUE ~ 99
   )
 }
 
-format_armn <- function(x) {
-  case_when(
-    x=="Placebo" ~ 0,
-    x=="Xanomeline Low Dose" ~ 1,
-    x=="Xanomeline High Dose" ~ 2,
-    TRUE ~ 99
-  )}
+
   
 format_trt01pn <- function(x) {
   case_when(
@@ -283,6 +284,100 @@ adsl_dm <- dm %>%
 ```
 
 
+*DCDECOD*
+
+DS.DSDECOD where DSCAT='DISPOSITION EVENT'
+
+```{r}
+
+ds.DCDECOD = ds %>%
+  
+  filter(DSCAT == "DISPOSITION EVENT") %>% 
+  
+  select(USUBJID, DSDECOD)
+
+adsl.DCDECOD = merge(adsl_dm,
+                   
+                   ds.DCDECOD) %>% 
+  
+  rename(DCDECOD = DSDECOD)
+
+adsl.DCDECOD
+
+
+adsl_dm = adsl.DCDECOD
+```
+
+
+*DCSREAS*
+
+I think this is just the lower case version (first letter capital) of DCDECOD
+
+```{r}
+
+adsl.DCSREAS = adsl_dm %>%
+  
+  mutate(DSCREAS = str_to_title(adsl_dm$DCDECOD))
+
+adsl.DCSREAS
+
+adsl_dm = adsl.DCSREAS
+
+```
+
+
+*DISCONFL*
+
+Y_Blank type (Y or NULL)
+
+Y if DCREASCD != 'Completed'. Null otherwise
+--> this should be "DCREAS" in the current adsl variables
+
+(the spec order didn't make sense; DCDECOD and DCREAS should come first...)
+
+
+```{r}
+
+adsl.DISCONFL = adsl_dm %>% 
+  
+  mutate(
+    
+    DISCONFL = case_when(
+      
+      DSCREAS != "Completed" ~ "Y",
+      
+      TRUE ~ ""
+      
+      )
+    
+    )
+
+adsl.DISCONFL
+
+adsl_dm = adsl.DISCONFL
+
+```
+
+
+
+
+*TRTEDT*
+
+The date of final dose (from the CRF) is EX.EXENDTC on the subject's last EX record.
+
+If the date of final dose is missing for the subject *and* the subject discontinued after visit 3,
+use the date of discontinuation as the date of last dose. Convert the date to a SAS date.
+
+```{r}
+
+
+
+```
+
+
+
+*TRTDUR* 
+
 
 ```{r}
 
@@ -296,7 +391,7 @@ sv_3 = sv %>%
 
 # get end date
 
-ex_last = ex %>% 
+ex_last.0 = ex %>% 
   
   group_by(USUBJID) %>% 
   
@@ -304,11 +399,17 @@ ex_last = ex %>%
   
   slice(n())
 
+ex_last.1 = ex %>% 
+  
+  group_by(USUBJID) %>% 
+  
+  arrange(as.Date(EXSTDTC)) %>%
+  
+  slice(n())
+
 # check if last date worked
 
-max((ex_last %>% count(USUBJID))$n)
-
-max(is.na((ex_last %>% count(USUBJID))$n))
+dim(ex_last)
 
 # try to merge the df 's
 
@@ -520,28 +621,6 @@ adsl.all = adsl.all %>%
   mutate(TRT01AN = TRT01PN,
          
          .after = TRT01A)
-```
-
-
-*AVGDD*
-
-Programming this was complicated so we will finish other variables first
-
-
-```{r}
-
-
-# need CUMDOSE, and for that we need ARMN
-
-# for dose 81, we need something tricky:
-
-# 54 for int 1, then 81 for int 2, then 54 for int 3
-
-
-
-
-
-
 ```
 
 
@@ -996,84 +1075,6 @@ adsl_12_all
 ```
 
 
-
-
-
-
-*DCDECOD*
-
-DS.DSDECOD where DSCAT='DISPOSITION EVENT'
-
-```{r}
-
-ds.DCDECOD = ds %>%
-  
-  filter(DSCAT == "DISPOSITION EVENT") %>% 
-  
-  select(USUBJID, DSDECOD)
-
-adsl.DCDECOD = merge(adsl.all,
-                   
-                   ds.DCDECOD) %>% 
-  
-  rename(DCDECOD = DSDECOD)
-
-adsl.DCDECOD
-
-
-adsl.all = adsl.DCDECOD
-```
-
-
-*DCSREAS*
-
-I think this is just the lower case version (first letter capital) of DCDECOD
-
-```{r}
-
-adsl.DCSREAS = adsl.all %>%
-  
-  mutate(DSCREAS = str_to_title(adsl.all$DCDECOD))
-
-adsl.DCSREAS
-
-adsl.all = adsl.DCSREAS
-
-```
-
-
-*DISCONFL*
-
-Y_Blank type (Y or NULL)
-
-Y if DCREASCD != 'Completed'. Null otherwise
---> this should be "DCREAS" in the current adsl variables
-
-(the spec order didn't make sense; DCDECOD and DCREAS should come first...)
-
-
-```{r}
-
-adsl.DISCONFL = adsl.all %>% 
-  
-  mutate(
-    
-    DISCONFL = case_when(
-      
-      DSCREAS != "Completed" ~ "Y",
-      
-      TRUE ~ ""
-      
-      )
-    
-    )
-
-adsl.DISCONFL
-
-adsl.all = adsl.DISCONFL
-
-```
-
 *DSRAEFL*
 
 Y if DCREASCD='Adverse Event'. Null otherwise
@@ -1435,6 +1436,77 @@ adsl.all = adsl.durdsgr1
 
 ```
 
+*ARMN*
+
+```{r}
+
+# let's work from ARMN in adsl...
+
+adsl.ARMN = adsl.all %>% 
+  
+  mutate(ARMN = format_armn(ARM))
+
+```
+
+*CUMDOSE*
+
+For ARMN=0 or 1: CUMDOSE= TRT01PN*TRTDUR. 
+
+--- For ARMN=2: CUMDOSE will be based on:
+
+1. 54mg per day for the # of days subj was
+in 1st dosing interval 
+
+(i.e., visit4date-TRTSDT+1 if 1st interval completed,
+TRTEDT-TRTSDT+1 if subj discontinued <=visit 4 and > visit 3), 
+
+2. 81mg per day for the # of days subj was in 2nd dosing interval
+
+(i.e., visit12date-visit4date if 2nd interval completed,
+TRTEDT-visit4date if subj discontinued <= visit 12 and > visit 4) 
+
+3. 54mg per day for the # of days subj was in 3rd dosing interval
+(i.e., TRTEDT - visit12date if subj continued after visit 12).
+
+
+... need to compute based on visit dates (by USUBJID)
+
+
+```{r}
+
+adsl.ARMN %>% 
+  
+  mutate(CUMDOSE = case_when(
+    
+    ARMN == 0 | ARMN == 51 ~ TRT01PN*TRTDUR,
+    
+    ARMN == 99 ~ NA,
+    
+    ARMN == 81 ~ 
+    
+  ))
+
+```
+
+*some TREDT and TRTDUR are missing values (not NA). Need to check why.*
+
+
+*AVGDD*
+
+Programming this depends on CUMDOSE...
+
+CUMDOSE/TRTDURD
+
+
+```{r}
+
+
+
+
+
+
+```
+
 
 *EOSSTT*
 
@@ -1458,8 +1530,6 @@ Sum of QS.QSORRES values for the subject when QSCAT = MINI-MENTAL STATE
 
 
 ```
-
-
 
 
 
