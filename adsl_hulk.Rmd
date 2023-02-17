@@ -180,6 +180,9 @@ return(adsl_n_all)
 
 ```
 
+
+
+
 ```{r call in SDTM data}
 
 # Read in input SDTM data 
@@ -193,6 +196,7 @@ vs <- read_xpt("sdtm/vs.xpt")
 qs <- read_xpt("sdtm/qs.xpt")
 mh <- read_xpt("sdtm/mh.xpt")
 sv <- read_xpt("sdtm/sv.xpt")
+sc <- read_xpt("sdtm/sc.xpt")
 
 my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
 
@@ -206,7 +210,57 @@ metacore$ds_vars
 
 ```
 
+adapting compxxfl function from adsl_spidey2
 
+
+```{r}
+
+COMPxxFL <- function(sv, adsl, visitnum, xx){
+
+sv %>%
+  filter(VISITNUM == visitnum) %>%
+  select(USUBJID, SVSTDTC, VISITNUM) %>% 
+  full_join(., adsl, by ="USUBJID") %>%
+  mutate(SVSTDTC = SVSTDTC %>% ymd, RFENDTC = RFENDTC %>% ymd) %>%
+  mutate(aux = if_else(VISITNUM == visitnum & RFENDTC>=SVSTDTC,"Y","N")) %>%
+  mutate(!!paste0("COMP", xx, "FL") := ifelse(is.na(aux),"N","Y")) %>%
+  select(USUBJID, !!paste0("COMP", xx, "FL")) %>%
+  arrange(., USUBJID) 
+  
+}
+
+```
+
+
+```{r}
+
+THISTHAT <- function(adsl, domain, output, input, condition.var, condition.val){
+  
+  full_join(adsl,
+            
+            domain %>% select(USUBJID, input, condition.var) %>%
+              
+              filter(get(condition.var) == condition.val) %>%
+              
+              select(USUBJID, input),
+            
+            by = "USUBJID") %>%
+    
+    rename(!!output := input) %>% 
+    
+    select(USUBJID, output)
+  
+}
+  
+  
+```
+
+
+```{r}
+
+# COMPxxFL(sv, adsl.all, 8, 8)
+
+```
 
 
 ```{r}
@@ -1218,19 +1272,191 @@ adsl.BMIBLGR1 = adsl.all %>%
 
 adsl.BMIBLGR1
 
+adsl.all = adsl.BMIBLGR1
+
+```
+
+
+writing new function right quick
+
+(moved to top, this chunk was for testing)
+
+
+```{r}
+# adsl = adsl.all
+# 
+# domain = sv
+# 
+# output = "VISIT1DT"
+# 
+# input = "SVSTDTC"
+# 
+# condition.var = "VISITNUM"
+# 
+# condition.val = 1
 ```
 
 
 
+*EDUCLVL*
+
+SC.SCSTRESN where SC.SCTESTCD=EDLEVEL
+
+
+```{r}
 
 
 
+THISTHAT(adsl, sc, "EDUCLVL", "SCSTRESN", "SCTESTCD", "EDLEVEL")
+
+```
+
+*DISONSDT*
+
+MH.MHSTDTC where MHCAT='PRIMARY DIAGNOSIS' converted to SAS date
+
+
+```{r}
+
+THISTHAT(adsl, mh, "DISONSDT", "MHSTDTC", "MHCAT", "PRIMARY DIAGNOSIS")
+```
+
+
+*VISIT1DT*
+
+SV.SVSTDTC when SV.VISITNUM=1, converted to SAS date
+
+
+```{r}
+
+THISTHAT(adsl, sv, "VISIT1DT", "SVSTDTC", "VISITNUM", 1)
+
+
+```
+
+
+*EDUCLVL*
+
+SC.SCSTRESN where SC.SCTESTCD=EDLEVEL
+
+```{r}
+
+adsl.educlvl <- full_join(adsl.all,
+                          
+                          sc %>% filter(SCTESTCD == "EDLEVEL") %>% select(USUBJID, SCSTRESN),
+                          
+                          by = "USUBJID") %>%
+  
+  rename(EDUCLVL = SCSTRESN)
+
+adsl.educlvl
+
+adsl.all <- adsl.educlvl
+
+```
+
+*DISONSDT*
+
+MH.MHSTDTC where MHCAT='PRIMARY DIAGNOSIS' converted to SAS date
+
+```{r}
+
+adsl.disonsdt <- full_join(adsl.all,
+                          
+                          mh %>% filter(MHCAT == "PRIMARY DIAGNOSIS") %>% select(USUBJID, MHSTDTC),
+                          
+                          by = "USUBJID") %>%
+  
+  rename(DISONSDT = MHSTDTC)
+
+adsl.disonsdt
+
+adsl.all <- adsl.disonsdt
+
+```
+
+
+*VISIT1DT*
+
+SV.SVSTDTC when SV.VISITNUM=1, converted to SAS date
+
+```{r}
+
+adsl.VISIT1DT <- full_join(adsl.all,
+                          
+                          sv %>% filter(VISITNUM == 1) %>% select(USUBJID, SVSTDTC),
+                          
+                          by = "USUBJID") %>%
+  
+  rename(VISIT1DT = SVSTDTC)
+
+adsl.VISIT1DT
+
+adsl.all <- adsl.VISIT1DT
+
+```
+
+
+*DURDIS*
+
+Number of months between VISIT1DT and DISONSDT
+
+```{r}
+
+adsl.durdis <- adsl.all %>% 
+  
+  mutate(DURDIS = round(time_length(VISIT1DT %>% ymd - DISONSDT %>% ymd, unit = "months"), digits = 1))
+
+adsl.durdis
+
+adsl.all = adsl.durdis
+```
+
+
+*DURDSGR1*
+
+grouping DURDIS values as <12 and >=12
+
+```{r}
+
+adsl.durdsgr1 <- adsl.all %>% 
+  
+  mutate(DURDSGR1 = case_when(
+    
+    DURDIS < 12 ~ "<12",
+    DURDIS >= 12 ~ ">=12"
+    
+  ))
+
+adsl.durdsgr1
+
+adsl.all = adsl.durdsgr1
+
+```
+
+
+*EOSSTT*
+
+COMPLETED if ADSL.DCDECOD='COMPLETED'. DISCONTINUED if ADSL.DCDECOD not equal to COMPLETED.
+
+
+```{r}
 
 
 
+```
 
 
 
+*MMSETOT*
+
+Sum of QS.QSORRES values for the subject when QSCAT = MINI-MENTAL STATE
+
+```{r}
+
+
+
+```
 
 
 
