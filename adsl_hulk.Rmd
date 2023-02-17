@@ -370,13 +370,21 @@ Before TRTEDT, first check the last date of the discontinuation (if so)
 
 adsl.DISCDT <-
   ds %>% 
-  filter(DSDECOD != "COMPLETED") %>% 
+  
+  filter(DSDECOD != "COMPLETED") %>%    # subject discontinued
+  
   group_by( USUBJID ) %>%
-  slice(n()) %>% 
-  mutate(DSVNUM=VISITNUM) %>% 
-  select(USUBJID, DSSTDTC, DSVNUM)
+  
+  slice(n()) %>%                        # last date since there are more than 1 rec per sub
+  
+  mutate(DSVNUM=VISITNUM) %>%           # rename visitnum to use it in TRTDUR
+  
+  select(USUBJID, DSSTDTC, DSVNUM)     
 
 
+adsl_dm = merge(adsl_dm,
+                 
+                 adsl.DISCDT)
 ```
 
 
@@ -390,9 +398,14 @@ use the date of discontinuation as the date of last dose. Convert the date to a 
 
 ```{r}
 
-
+adsl.TRTDET <- adsl_dm %>% 
+  case_when ( 
+     
+    )
 
 ```
+
+
 
 
 
