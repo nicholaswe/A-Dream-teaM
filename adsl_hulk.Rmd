@@ -201,12 +201,6 @@ sc <- read_xpt("sdtm/sc.xpt")
 my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
 
 
-# Read in metacore object 
-load(metacore_example("pilot_ADaM.rda"))
-metacore <- metacore %>% 
-  select_dataset("ADSL")
-
-metacore$ds_vars
 
 ```
 
@@ -540,6 +534,11 @@ Programming this was complicated so we will finish other variables first
 # for dose 81, we need something tricky:
 
 # 54 for int 1, then 81 for int 2, then 54 for int 3
+
+
+
+
+
 
 ```
 
