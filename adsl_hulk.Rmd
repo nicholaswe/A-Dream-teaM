@@ -529,11 +529,13 @@ adsl.all = adsl.all %>%
 ```
 
 
+*AVGDD*
+
 Programming this was complicated so we will finish other variables first
+
 
 ```{r}
 
-# AVGDD
 
 # need CUMDOSE, and for that we need ARMN
 
