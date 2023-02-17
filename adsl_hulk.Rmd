@@ -290,11 +290,13 @@ DS.DSDECOD where DSCAT='DISPOSITION EVENT'
 
 ```{r}
 
+
+
 ds.DCDECOD = ds %>%
   
   filter(DSCAT == "DISPOSITION EVENT") %>% 
   
-  select(USUBJID, DSDECOD)
+  select(USUBJID, DSDECOD )
 
 adsl.DCDECOD = merge(adsl_dm,
                    
@@ -361,6 +363,24 @@ adsl_dm = adsl.DISCONFL
 
 
 
+**
+Before TRTEDT, first check the last date of the discontinuation (if so)
+
+```{r}
+
+adsl.DISCDT <-
+  ds %>% 
+  filter(DSDECOD != "COMPLETED") %>% 
+  group_by( USUBJID ) %>%
+  slice(n()) %>% 
+  mutate(DSVNUM=VISITNUM) %>% 
+  select(USUBJID, DSSTDTC, DSVNUM)
+
+
+```
+
+
+
 *TRTEDT*
 
 The date of final dose (from the CRF) is EX.EXENDTC on the subject's last EX record.
@@ -373,6 +393,7 @@ use the date of discontinuation as the date of last dose. Convert the date to a 
 
 
 ```
+
 
 
 
