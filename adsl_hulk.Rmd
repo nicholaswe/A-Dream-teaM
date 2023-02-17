@@ -360,9 +360,6 @@ adsl_dm = adsl.DISCONFL
 
 ```
 
-
-
-
 **
 Before TRTEDT, first check the last date of the discontinuation (if so)
 
@@ -398,15 +395,35 @@ use the date of discontinuation as the date of last dose. Convert the date to a 
 
 ```{r}
 
-adsl.TRTDET <- adsl_dm %>% 
-  case_when ( 
-     
-    )
+#merge in with EX
+
+adsl.EXENDTC <- ex %>% 
+  
+  select(USUBJID, EXENDTC)
+
+
+adsl_dm = merge(adsl_dm,
+                 
+                 adsl.EXENDTC)
+
+
+adsl.TRTEDT <- adsl_dm %>% 
+  mutate(TRTEDT =
+  case_when (
+    
+            EXENDTC == NA_character_ & DSVNUM > 3 ~  as.Date(DSSTDTC) , # DISC subs
+      
+            TRUE ~ as.Date(EXENDTC)
+           )
+        )
+
+
+
+adsl_dm = merge(adsl_dm,
+                 
+                 adsl.TRTEDT)
 
 ```
-
-
-
 
 
 
