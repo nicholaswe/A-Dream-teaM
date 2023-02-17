@@ -180,6 +180,9 @@ return(adsl_n_all)
 
 ```
 
+
+
+
 ```{r call in SDTM data}
 
 # Read in input SDTM data 
@@ -193,6 +196,7 @@ vs <- read_xpt("sdtm/vs.xpt")
 qs <- read_xpt("sdtm/qs.xpt")
 mh <- read_xpt("sdtm/mh.xpt")
 sv <- read_xpt("sdtm/sv.xpt")
+sc <- read_xpt("sdtm/sc.xpt")
 
 my_spec <- read_xlsx("metadata/specs.xlsx", sheet = "Codelists")
 
@@ -206,7 +210,57 @@ metacore$ds_vars
 
 ```
 
+adapting compxxfl function from adsl_spidey2
 
+
+```{r}
+
+COMPxxFL <- function(sv, adsl, visitnum, xx){
+
+sv %>%
+  filter(VISITNUM == visitnum) %>%
+  select(USUBJID, SVSTDTC, VISITNUM) %>% 
+  full_join(., adsl, by ="USUBJID") %>%
+  mutate(SVSTDTC = SVSTDTC %>% ymd, RFENDTC = RFENDTC %>% ymd) %>%
+  mutate(aux = if_else(VISITNUM == visitnum & RFENDTC>=SVSTDTC,"Y","N")) %>%
+  mutate(!!paste0("COMP", xx, "FL") := ifelse(is.na(aux),"N","Y")) %>%
+  select(USUBJID, !!paste0("COMP", xx, "FL")) %>%
+  arrange(., USUBJID) 
+  
+}
+
+```
+
+
+```{r}
+
+THISTHAT <- function(adsl, domain, output, input, condition.var, condition.val){
+  
+  full_join(adsl,
+            
+            domain %>% select(USUBJID, input, condition.var) %>%
+              
+              filter(get(condition.var) == condition.val) %>%
+              
+              select(USUBJID, input),
+            
+            by = "USUBJID") %>%
+    
+    rename(!!output := input) %>% 
+    
+    select(USUBJID, output)
+  
+}
+  
+  
+```
+
+
+```{r}
+
+# COMPxxFL(sv, adsl.all, 8, 8)
+
+```
 
 
 ```{r}
@@ -740,7 +794,6 @@ adsl.all = adsl_comp24
 this is the basis of the "flag_n()" function
 
 ```{r}
-
 sv8 = sv %>% 
   
   filter(VISITNUM == 8) %>% 
@@ -749,6 +802,12 @@ sv8 = sv %>%
          
          SVSTDTC)
 
+sv8
+
+```
+
+
+```{r}
 # combine these vist 8 IDS with main datset
 
 adsl_8 = merge(adsl_EFFFL,
@@ -765,8 +824,14 @@ adsl_8 = merge(adsl_EFFFL,
       
       ),
     
-    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC)) 
+    date_diff = as.Date(RFENDTC) - as.Date(SVSTDTC))
 
+adsl_8
+
+```
+
+
+```{r}
 str(adsl_8)
 
 unique(adsl_8$COMP8FL)
@@ -775,6 +840,11 @@ min(adsl_8$date_diff)
 
 # all vist 8 pts had the right date condition, so all are yes
 # let's add back the non-vist 8 pts with the %in% strategy...
+
+```
+
+
+```{r}
 
 adsl_8_N = adsl_EFFFL %>% 
   
@@ -785,11 +855,17 @@ adsl_8_N = adsl_EFFFL %>%
 # add the non-visit 8 pts to visit 8 pts
 
 adsl_8_all = rbind((adsl_8 %>% select(-SVSTDTC, -date_diff)),
+                   
                    adsl_8_N)
 
 adsl_8_all
 
 # adsl.all = adsl_8_all
+
+```
+```{r}
+
+adsl_8_all$COMP8FL %>% table()
 
 ```
 
@@ -1110,11 +1186,14 @@ adsl.all = adsl.HEIGHTBL
 
 *WEIGHTBL*
 
-*FIX: ONE PT DROPPED BETWEEN VISITS 1 AND 3*
+*FIXED: ONE PT WITHDREW BETWEEN VISITS 1 AND 3*
+
+filtered with %in% of the visit3 pts, and made the remainder "" for this
+
 
 VSSTRESN when VS.VSTESTCD='WEIGHT' and VS.VISITNUM=3
 
-Otherwise, let's make it "" ? 
+Otherwise, let's make it ""
 
 
 ```{r}
@@ -1131,11 +1210,13 @@ vs.WEIGHTBL = vs %>%
   
   select(-VSSTRESN)
 
+
 adsl.SF.WEIGHTBL = adsl.all %>% 
   
-  filter(str_detect(ARM, "Screen Failure")) %>% 
+  filter(!(USUBJID %in% vs.WEIGHTBL$USUBJID)) %>% 
   
-  mutate(WEIGHTBL = "")
+    mutate(WEIGHTBL = "")
+
 
 adsl.WEIGHTBL.pre = merge(adsl.all,
                       
@@ -1147,7 +1228,237 @@ adsl.WEIGHTBL = rbind(adsl.WEIGHTBL.pre,
 
 adsl.WEIGHTBL
 
+adsl.all = adsl.WEIGHTBL
+
 ```
+
+
+
+*BMIBL*
+
+WEIGHTBL / ((HEIGHTBL/100)**2)
+
+```{r}
+
+adsl.BMIBL = adsl.all %>% 
+  
+  mutate(BMIBL = (as.numeric(paste(WEIGHTBL))) / ((as.numeric(paste(HEIGHTBL))) / 100)^2)
+
+adsl.BMIBL
+
+adsl.all = adsl.BMIBL
+
+```
+
+
+*BMIBLGR1*
+
+"BMIBLGR1=""<25"" if . < BMIBL <25.
+BMIBLGR1=""25-<30"" if 25 <=BMIBL <30.
+BMIBLGR1="">=30""if BMIBL >=30."
+
+
+```{r}
+
+adsl.BMIBLGR1 = adsl.all %>% 
+  
+  mutate(BMIBLGR1 = case_when(
+    
+    BMIBL < 25 ~ "<25",
+    BMIBL >= 25 & BMIBL <30 ~ "25-<30",
+    BMIBL >= 30 ~ ">=30"
+    
+  ))
+
+adsl.BMIBLGR1
+
+adsl.all = adsl.BMIBLGR1
+
+```
+
+
+writing new function right quick
+
+(moved to top, this chunk was for testing)
+
+
+```{r}
+# adsl = adsl.all
+# 
+# domain = sv
+# 
+# output = "VISIT1DT"
+# 
+# input = "SVSTDTC"
+# 
+# condition.var = "VISITNUM"
+# 
+# condition.val = 1
+```
+
+
+
+*EDUCLVL*
+
+SC.SCSTRESN where SC.SCTESTCD=EDLEVEL
+
+
+```{r}
+
+
+
+THISTHAT(adsl, sc, "EDUCLVL", "SCSTRESN", "SCTESTCD", "EDLEVEL")
+
+```
+
+*DISONSDT*
+
+MH.MHSTDTC where MHCAT='PRIMARY DIAGNOSIS' converted to SAS date
+
+
+```{r}
+
+THISTHAT(adsl, mh, "DISONSDT", "MHSTDTC", "MHCAT", "PRIMARY DIAGNOSIS")
+```
+
+
+*VISIT1DT*
+
+SV.SVSTDTC when SV.VISITNUM=1, converted to SAS date
+
+
+```{r}
+
+THISTHAT(adsl, sv, "VISIT1DT", "SVSTDTC", "VISITNUM", 1)
+
+
+```
+
+
+*EDUCLVL*
+
+SC.SCSTRESN where SC.SCTESTCD=EDLEVEL
+
+```{r}
+
+adsl.educlvl <- full_join(adsl.all,
+                          
+                          sc %>% filter(SCTESTCD == "EDLEVEL") %>% select(USUBJID, SCSTRESN),
+                          
+                          by = "USUBJID") %>%
+  
+  rename(EDUCLVL = SCSTRESN)
+
+adsl.educlvl
+
+adsl.all <- adsl.educlvl
+
+```
+
+*DISONSDT*
+
+MH.MHSTDTC where MHCAT='PRIMARY DIAGNOSIS' converted to SAS date
+
+```{r}
+
+adsl.disonsdt <- full_join(adsl.all,
+                          
+                          mh %>% filter(MHCAT == "PRIMARY DIAGNOSIS") %>% select(USUBJID, MHSTDTC),
+                          
+                          by = "USUBJID") %>%
+  
+  rename(DISONSDT = MHSTDTC)
+
+adsl.disonsdt
+
+adsl.all <- adsl.disonsdt
+
+```
+
+
+*VISIT1DT*
+
+SV.SVSTDTC when SV.VISITNUM=1, converted to SAS date
+
+```{r}
+
+adsl.VISIT1DT <- full_join(adsl.all,
+                          
+                          sv %>% filter(VISITNUM == 1) %>% select(USUBJID, SVSTDTC),
+                          
+                          by = "USUBJID") %>%
+  
+  rename(VISIT1DT = SVSTDTC)
+
+adsl.VISIT1DT
+
+adsl.all <- adsl.VISIT1DT
+
+```
+
+
+*DURDIS*
+
+Number of months between VISIT1DT and DISONSDT
+
+```{r}
+
+adsl.durdis <- adsl.all %>% 
+  
+  mutate(DURDIS = round(time_length(VISIT1DT %>% ymd - DISONSDT %>% ymd, unit = "months"), digits = 1))
+
+adsl.durdis
+
+adsl.all = adsl.durdis
+```
+
+
+*DURDSGR1*
+
+grouping DURDIS values as <12 and >=12
+
+```{r}
+
+adsl.durdsgr1 <- adsl.all %>% 
+  
+  mutate(DURDSGR1 = case_when(
+    
+    DURDIS < 12 ~ "<12",
+    DURDIS >= 12 ~ ">=12"
+    
+  ))
+
+adsl.durdsgr1
+
+adsl.all = adsl.durdsgr1
+
+```
+
+
+*EOSSTT*
+
+COMPLETED if ADSL.DCDECOD='COMPLETED'. DISCONTINUED if ADSL.DCDECOD not equal to COMPLETED.
+
+
+```{r}
+
+
+
+```
+
+
+
+*MMSETOT*
+
+Sum of QS.QSORRES values for the subject when QSCAT = MINI-MENTAL STATE
+
+```{r}
+
+
+
+```
+
+
 
 
 
@@ -1336,4 +1647,26 @@ adsl<-dm %>% select(AGE,
          TRTDUR=TRTEDT-TRTSDT+1) # %>%
 
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
