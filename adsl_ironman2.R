@@ -180,9 +180,8 @@ codelistArmN <- codelist %>%
   select(name,ARMN,ARM) %>% 
   filter(name=="ARMN")
 
-# Add RACE numeric values to dm_race  
+# Add ARMN numeric values by left join  
 dm_vars_plus_ArmN <- dm_SVSTDTC %>%
-  # Join DMRACE with Codelist to get RACEN 
   derive_vars_merged_lookup(
     dataset_add = codelistArmN,
     new_vars = vars(ARMN),
