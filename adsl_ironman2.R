@@ -202,16 +202,22 @@ dm_vars_plus_visit1dt <- dm_vars_plus_ArmN %>%
   ) 
 
 
-
-
-
-
-
-=======
+# 240 WEIGHTBL (VSSTRESN when VS.VSTESTCD='WEIGHT' and VS.VISITNUM=3)----
+  #Select records properly to be merged
+vs_vars <- vs %>% 
+  filter(VISITNUM==3 & VSTESTCD=="WEIGHT") %>%   
+  mutate(WEIGHTBL=VSSTRESN) %>% 
+  select(USUBJID,WEIGHTBL) 
+  
+    # left join
+dm_weightbl <- dm_vars_plus_visit1dt %>% 
+  derive_vars_merged(
+    dataset_add = vs_vars,
+    new_vars = vars(WEIGHTBL),
+    by_vars = vars(USUBJID)  
   ) 
 
-dm_racen <- dm_racen %>% 
-  select(-term) 
+
 
 
 
@@ -219,13 +225,6 @@ dm_racen <- dm_racen %>%
 sv
 
 
-# 224 Calculate SAFFL ('Y' if ITTFL='Y' and TRTSDT ne missing. 'N' otherwise) ----
-
-mutate(
-  
-  SAFFL=if_else(ITTFL = "Y","elderly","adult") %>% 
-    select(USBJID, AGE,AGEGR)
-)
 
 
 
