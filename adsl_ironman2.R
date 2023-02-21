@@ -231,7 +231,7 @@ mutate(
 
 
 
->>>>>>> 875a4ca5a771967d2d82fa7da24ab8b6adbf766b
+
 
 usethis::use_git_config(user.name = "nelsonamurciab@gmail.com",
                         user.email = "murciabn")
@@ -241,3 +241,4 @@ usethis::use_git_config(user.name = "nelsonamurciab@gmail.com",
 
 gitcreds::gitcreds_set()
 
+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
