@@ -241,4 +241,3 @@ usethis::use_git_config(user.name = "nelsonamurciab@gmail.com",
 
 gitcreds::gitcreds_set()
 
-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
