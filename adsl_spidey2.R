@@ -185,7 +185,7 @@ adsl_trt <- adsl_ct %>%
 
 
 
-### DCDECOD (WE ARE SKIPPING THIS ONE)
+### DCDECOD 
 
 # PRE_DCDECOD <- ds %>% select(USUBJID, DSDECOD, DSCAT)
 # 
@@ -286,13 +286,14 @@ TRTSDT <-  sv %>% select(USUBJID, SVSTDTC, VISITNUM) %>%
 
 ###  TRTEDT
 
-PRE_TRTEDT <- ex %>% select(USUBJID, EXENDTC, VISITNUM, VISIT, EXDOSE) %>% 
-              group_by(USUBJID) %>% 
-              filter(row_number()==n())
 
-  
-  TRTEDT  <- left_join(PRE_COMP16FL, adsl_preds %>%  select(USUBJID, RFENDTC),  by = "USUBJID")
-
+TRTEDT <- ex %>% select(USUBJID, EXENDTC, VISITNUM, VISIT, EXDOSE) %>%
+  arrange(USUBJID, desc(EXENDTC)) %>%
+  group_by(USUBJID) %>%
+  slice(1) %>%
+  ungroup() %>% 
+  mutate(TRTEDT = EXENDTC%>% ymd) %>% 
+  select(USUBJID, TRTEDT)
 
 ###   COMPxxFL
 
@@ -316,6 +317,31 @@ COMP24FL <- COMPxxFL(sv, adsl_preds, 12, 24)
 COMP8FL <- COMPxxFL(sv, adsl_preds, 8, 8)
 
 
+
+### VISIT1DT
+
+VISIT1DT <-  sv %>% select(USUBJID, SVSTDTC, VISITNUM) %>% 
+  filter(VISITNUM == 1) %>% 
+  mutate(VISIT1DT = SVSTDTC %>% ymd) %>% 
+  select(USUBJID, VISIT1DT) 
+
+### SAFFL (CHECK THIS ONE WITH NICHOLAS)
+
+SAFFL <- left_join(adsl_ct %>% select(USUBJID, ITTFL), TRTSDT, by ="USUBJID") %>% 
+         mutate( SAFFL = if_else(ITTFL == "Y" & is.na(TRTSDT) ,"N","Y")) %>% 
+         select(USUBJID, SAFFL)
+
+### EFFFL
+
+qs %>%filter((QSTEST=="ADAS-COG(11) Subscore" & VISITNUM > 3) &
+               (QSTEST=="EXTENT OF CHANGE, IF ANY, SINCE BASELINE" & VISITNUM > 3)
+             ) %>%  count(QSTEST, VISITNUM) 
+
+
+EFFFL <- qs %>%  select(USUBJID, QSTEST, VISITNUM) %>% 
+                 filter((QSTEST=="ADAS-COG(11) Subscore" & VISITNUM > 3) & 
+                          (QSTEST=="EXTENT OF CHANGE, IF ANY, SINCE BASELINE" & VISITNUM > 3)
+                          )
 
 #table(ex$EXDOSE, ex$EXTRT)
 # Next (last) step: merge with ADSL
