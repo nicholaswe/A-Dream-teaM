@@ -75,6 +75,8 @@ dm <- convert_blanks_to_na(dm)
 ds <- convert_blanks_to_na(ds)
 ex <- convert_blanks_to_na(ex)
 qs <- convert_blanks_to_na(qs)
+vs <- convert_blanks_to_na(vs)
+sv <- convert_blanks_to_na(sv)
 suppdm <- convert_blanks_to_na(suppdm)
 
 
@@ -217,16 +219,23 @@ dm_weightbl <- dm_vars_plus_visit1dt %>%
     by_vars = vars(USUBJID)  
   ) 
 
+# 235 The date of final dose (from the CRF) is EX.EXENDTC on the subject's last EX record. 
+# If the date of final dose is missing for the subject and the subject discontinued after visit 3, 
+# use the date of discontinuation as the date of last dose.
+# Convert the date to a SAS date.
 
-
-
-
-
-sv
-
-
-
-
+  ex_trtedt <- ex %>% 
+    group_by(USUBJID) %>% 
+    slice(which.max(EXSEQ)) %>% 
+    ungroup() %>% 
+    derive_vars_dt( # Create a date variable named RFENDT from character variable SVSTDTC
+    new_vars_prefix = "TRTE",
+    dtc = EXENDTC
+  ) %>% 
+    select(USUBJID,TRTEDT)  
+  
+  ex_trtedt_missing  <-  ex_trtedt %>% 
+    filter(is.na(TRTEDT))
 
 
 
@@ -235,9 +244,6 @@ sv
 
 usethis::use_git_config(user.name = "nelsonamurciab@gmail.com",
                         user.email = "murciabn")
-
-usethis::create_github_token()
-
 
 gitcreds::gitcreds_set()
 
