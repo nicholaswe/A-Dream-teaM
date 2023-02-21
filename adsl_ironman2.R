@@ -236,7 +236,7 @@ sv
 usethis::use_git_config(user.name = "nelsonamurciab@gmail.com",
                         user.email = "murciabn")
 
-
+usethis::create_github_token()
 
 
 gitcreds::gitcreds_set()
