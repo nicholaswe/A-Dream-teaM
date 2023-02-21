@@ -240,8 +240,6 @@ dm_weightbl <- dm_vars_plus_visit1dt %>%
 
 
 
-
-
 usethis::use_git_config(user.name = "nelsonamurciab@gmail.com",
                         user.email = "murciabn")
 
