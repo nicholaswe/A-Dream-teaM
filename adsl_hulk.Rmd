@@ -379,7 +379,7 @@ adsl.DISCDT <-
   select(USUBJID, DSSTDTC, DSVNUM)     
 
 
-adsl_dm = merge(adsl_dm,
+adsl_dm.1 = merge(adsl_dm,
                  
                  adsl.DISCDT)
 ```
@@ -402,12 +402,12 @@ adsl.EXENDTC <- ex %>%
   select(USUBJID, EXENDTC)
 
 
-adsl_dm = merge(adsl_dm,
+adsl_dm.2 = merge(adsl_dm.1,
                  
                  adsl.EXENDTC)
 
 
-adsl.TRTEDT <- adsl_dm %>% 
+adsl.TRTEDT <- adsl_dm.2 %>% 
   mutate(TRTEDT =
   case_when (
     
@@ -419,138 +419,119 @@ adsl.TRTEDT <- adsl_dm %>%
 
 
 
-adsl_dm = merge(adsl_dm,
+adsl_dm.3 = merge(adsl_dm.2,
                  
                  adsl.TRTEDT)
 
 ```
 
 
+*kyle TRTEDT*
 
-*TRTDUR* 
+The date of final dose (from the CRF) is EX.EXENDTC on the subject's last EX record.
 
+If the date of final dose is missing for the subject *and* the subject discontinued after visit 3,
+use the date of discontinuation as the date of last dose. Convert the date to a SAS date.
 
 ```{r}
 
-# calculate treatment duration --------------------------------------------
+# date of final dose (last EX record)
 
-# get start date
-
-sv_3 = sv %>% 
-  
-  filter(VISITNUM == 3)
-
-# get end date
+# looks like we need to sort by *EXSEQ*
 
 ex_last.0 = ex %>% 
   
   group_by(USUBJID) %>% 
   
-  arrange(as.Date(EXENDTC)) %>%
+  arrange(EXSEQ) %>%
   
   slice(n())
 
-ex_last.1 = ex %>% 
+# this gives us TREDT from EXENDTC from non-SF pts
+
+# but, 6 pts need a value
+# we get these from "date of discontinuation", if visit 3 was completed...
+
+# check for these patients for discontinuation? sv?
+
+vs.TRTEDT = vs %>% 
   
   group_by(USUBJID) %>% 
+  arrange(VISITNUM) %>% 
+  slice(n()) %>% 
+  ungroup() %>% 
   
-  arrange(as.Date(EXSTDTC)) %>%
+  filter(USUBJID %in% (ex_last.0 %>% filter(EXENDTC == ""))$USUBJID)
   
-  slice(n())
+# visitnum for all is >3
+# then, let's get the "date of discontinuation, from ds!
 
-# check if last date worked
-
-dim(ex_last)
-
-# try to merge the df 's
-
-# dur_df = merge(x = (sv_3 %>% select(USUBJID, SVSTDTC)),
-#                
-#                y = (ex_last %>% select(USUBJID, EXENDTC)),
-#                
-#                by.x = sv_3$USUBJID)
-          
-
-# let's hack it instead
-
-sv_3_id = sv_3 %>% 
+ds.TRTEDT = ds %>% 
   
-  arrange(USUBJID) %>% 
+  group_by(USUBJID) %>% 
+  arrange(VISITNUM) %>% 
+  slice(n()) %>% 
+  ungroup() %>% 
   
-  select(USUBJID,
-         
-         SVSTDTC)
+  filter(USUBJID %in% (ex_last.0 %>% filter(EXENDTC == ""))$USUBJID)
 
-ex_last_id = ex_last %>% 
-  
-  arrange(USUBJID) %>% 
-  
-  select(USUBJID,
-         
-         EXENDTC)
+# so, we can take ds.DSSTDTC for the missing dates for these 6...
 
-# merge and get trtdur per ID:
-
-dur_df = merge(sv_3_id,
-               
-               ex_last_id) %>% 
+adsl.TREDT.k <- rbind(
   
-  mutate(
+  merge(adsl_dm,
+      ex_last.0 %>% filter(EXENDTC != "") %>% select(USUBJID, EXENDTC)) %>% 
+  
+  rename(TRTEDT = EXENDTC),
+  
+  merge(adsl_dm,
+      ds.TRTEDT %>% select(USUBJID, DSSTDTC)) %>% 
+  
+  rename(TRTEDT = DSSTDTC),
+  
+  adsl_dm %>% filter(DCDECOD == "SCREEN FAILURE") %>% 
     
-    TRTDUR = as.Date(EXENDTC) - as.Date(SVSTDTC) + 1
-    
-    )
+    mutate(TRTEDT = NA)
 
+)
+
+adsl.TREDT.k
+
+adsl.TREDT.k %>% filter(USUBJID %in% (ex_last.0 %>% filter(EXENDTC == ""))$USUBJID) %>% 
+  
+  select(USUBJID, TRTEDT)
+  
+```
+
+*kyle TRTSDT*
+
+SV.SVSTDTC when SV.VISITNUM=3, converted to SAS date
+
+```{r}
+
+adsl_dm.TRTSDT <- THISTHAT(adsl_dm, sv, "TRTSDT", "SVSTDTC", "VISITNUM", 3)
+
+
+adsl_dm <- merge(adsl.TREDT.k,
+                     
+                     adsl_dm.TRTSDT)
+
+adsl_dm
 
 ```
 
 
+*TRTDUR* 
+
+TRTEDT-TRTSDT+1
+
+
 ```{r}
-# combine adsl with treatment duration
+# calculate treatment duration --------------------------------------------
 
-adsl_dur = merge(adsl_dm,
-                 
-                 dur_df)
-
-# output didn't give same number of IDs as adsl, which don't match?
-
-difference = setdiff(adsl_dm$USUBJID,
-                     
-                     dur_df$USUBJID)
-
-
-adsl_match = adsl_dm %>% 
+adsl_trtdur <- adsl_dm %>% 
   
-  filter(ARM != "Screen Failure")
-
-
-# follow up with Martha, Monday -------------------------------------------
-# merge the 254 that match, then tack back on the remainder
-
-adsl_dur = merge(adsl_match,
-                 
-                 dur_df)
-
-# the remainder are all screen failures
-# let's just add empty variables for them, and then rbind
-
-
-adsl_SF = adsl_dm %>% 
-  
-  filter(ARM == "Screen Failure") %>% 
-  
-  mutate(SVSTDTC = NA,
-         EXENDTC = NA,
-         TRTDUR = NA
-         )
-
-
-# rbind it all together
-
-adsl_trtdur = rbind(adsl_dur,
-                    
-                    adsl_SF) 
-
+  mutate(TRTDUR = (TRTEDT %>% ymd)  - (TRTSDT %>% ymd) + 1)
 
 ```
 
@@ -571,8 +552,8 @@ adsl_order = adsl_trtdur %>%
          TRT01PN,
          # TRT01A,
          # TRT01AN,
-         TRTSDT = SVSTDTC,
-         TRTEDT = EXENDTC,
+         TRTSDT ,
+         TRTEDT ,
          TRTDURD = TRTDUR,
          # AVGDD
          # CUMDOSE
